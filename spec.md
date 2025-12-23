@@ -1,18 +1,29 @@
-# WarrantProof Specification v4.0
+# Gov-OS Specification v5.0
 
-**⚠️ SIMULATION ONLY - NOT REAL DoD DATA - FOR RESEARCH ONLY ⚠️**
+**THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY**
 
 ---
 
 ## System Purpose
 
-WarrantProof detects federal procurement fraud by measuring data complexity. Legitimate markets are chaotic (high entropy). Fraud requires coordination, which creates patterns (low entropy). Low entropy data compresses better than legitimate data.
+Gov-OS is a universal federal fraud detection operating system that detects procurement fraud by measuring data complexity. Legitimate markets are chaotic (high entropy). Fraud requires coordination, which creates patterns (low entropy). Low entropy data compresses better than legitimate data.
 
 **Core Principle:** Compression ratio reveals fraud.
 
 ---
 
-## Architecture Summary
+## Architecture Overview
+
+Gov-OS unifies multiple fraud detection subsystems into a single cohesive platform:
+
+| Subsystem | Purpose | Location |
+|-----------|---------|----------|
+| Core Detection | Compression-based fraud detection | `src/` |
+| Domain Modules | Extensible domain adapters | `src/domains/` |
+| Shipyard | Trump-class battleship tracking | `src/shipyard/` |
+| RAZOR | Kolmogorov validation engine | `src/razor/` |
+
+### Version History
 
 | Version | Focus | Key Innovation |
 |---------|-------|----------------|
@@ -20,7 +31,156 @@ WarrantProof detects federal procurement fraud by measuring data complexity. Leg
 | v2.0 | Physics | Entropy-based pattern emergence |
 | v3.0 OMEGA | Certainty | Kolmogorov complexity + ZK proofs |
 | v4.0 | Usability | Plain-language explanations + self-improvement |
-| Shipyard | Application | Trump-class battleship program tracking |
+| v5.0 | Unification | Single cohesive platform with domain modules |
+
+---
+
+## Unified Directory Structure
+
+```
+gov-os/
+├── cli.py                      # Unified command-line interface
+├── spec.md                     # This specification
+├── ledger_schema.json          # Core receipt type definitions
+├── CLAUDEME.md                 # Execution standard
+├── CITATIONS.md                # Source references
+├── DISCLAIMER.md               # Legal disclaimers
+│
+├── src/                        # Source code
+│   ├── __init__.py             # Package exports
+│   ├── core.py                 # Foundation: hash, receipts, citations
+│   ├── domain.py               # Domain loader and registry
+│   │
+│   ├── # Core Detection
+│   ├── compress.py             # Entropy compression analysis
+│   ├── detect.py               # Multi-stage anomaly detection
+│   ├── kolmogorov.py           # Algorithmic complexity
+│   ├── zkp.py                  # Zero-knowledge proofs
+│   ├── raf.py                  # Network cycle detection
+│   ├── holographic.py          # Boundary-only detection
+│   ├── thompson.py             # Bayesian audit sampling
+│   ├── ledger.py               # Merkle ledger + Bekenstein bounds
+│   ├── bridge.py               # Cross-branch translation
+│   ├── sim.py                  # Scenario simulation engine
+│   │
+│   ├── # v4.0 User-Friendly
+│   ├── insight.py              # Plain-language explanations
+│   ├── fitness.py              # Self-improving pattern tracking
+│   ├── guardian.py             # Evidence quality gates
+│   ├── freshness.py            # Evidence staleness detection
+│   ├── learner.py              # Cross-domain pattern transfer
+│   │
+│   ├── # Integration
+│   ├── usaspending_etl.py      # USASpending.gov integration
+│   ├── sam_validator.py        # SAM.gov vendor validation
+│   │
+│   ├── domains/                # Domain-specific modules
+│   │   ├── __init__.py
+│   │   ├── defense/            # Defense spending domain
+│   │   │   ├── config.yaml
+│   │   │   ├── data.py
+│   │   │   ├── receipts.py
+│   │   │   ├── scenarios.py
+│   │   │   ├── schema.py
+│   │   │   └── volatility.py
+│   │   └── medicaid/           # Medicaid spending domain
+│   │       ├── config.yaml
+│   │       ├── data.py
+│   │       ├── receipts.py
+│   │       ├── scenarios.py
+│   │       ├── schema.py
+│   │       └── volatility.py
+│   │
+│   ├── shipyard/               # Trump-class battleship module
+│   │   ├── constants.py        # Verified values with citations
+│   │   ├── receipts.py         # 8 shipbuilding receipt types
+│   │   ├── lifecycle.py        # Keel-to-delivery state machine
+│   │   ├── assembly.py         # Block welding + robotics
+│   │   ├── additive.py         # 3D printing validation
+│   │   ├── iterate.py          # SpaceX-style rapid iteration
+│   │   ├── nuclear.py          # SMR reactor installation
+│   │   ├── procurement.py      # Contract management
+│   │   └── sim_shipyard.py     # Monte Carlo simulation
+│   │
+│   └── razor/                  # Kolmogorov validation engine
+│       ├── core.py             # RAZOR constants and receipts
+│       ├── cohorts.py          # Historical fraud cohorts
+│       ├── ingest.py           # USASpending API client
+│       ├── physics.py          # Compression metrics
+│       └── validate.py         # Statistical validation
+│
+├── schemas/                    # Ledger schema definitions
+│   ├── ledger_schema_domains.json
+│   ├── ledger_schema_razor.json
+│   └── ledger_schema_shipyard.json
+│
+├── tests/                      # Unified test suite
+│   ├── conftest.py
+│   ├── test_compress.py
+│   ├── test_detect.py
+│   ├── test_v4_modules.py
+│   ├── test_shipyard_*.py
+│   ├── test_core_*.py
+│   ├── test_modules_*.py
+│   └── test_*.py
+│
+├── data/                       # Data and citations
+│   └── citations/
+│
+└── gate_*.sh                   # Execution gates (t2h, t24h, t48h)
+```
+
+---
+
+## CLI Commands
+
+### Core Commands
+
+```bash
+gov-os --test                           # System test
+gov-os --version                        # Version info
+gov-os scenario --run BASELINE          # Run simulation scenario
+gov-os export --scenario BASELINE       # Export results
+```
+
+### v4.0 User-Friendly Commands
+
+```bash
+gov-os explain --demo                   # Plain-language demo
+gov-os health                           # System health check
+gov-os patterns --list                  # View fraud patterns
+gov-os freshness --demo                 # Evidence freshness demo
+```
+
+### Domain Commands
+
+```bash
+gov-os defense simulate --cycles 100    # Defense domain simulation
+gov-os defense scenario BASELINE        # Run defense scenario
+gov-os defense scenarios                # Run all defense scenarios
+
+gov-os medicaid simulate --cycles 100   # Medicaid domain simulation
+gov-os medicaid scenario PROVIDER_RING  # Run medicaid scenario
+
+gov-os validate --domain all            # Validate all domains
+gov-os list domains                     # List available domains
+```
+
+### RAZOR Commands
+
+```bash
+gov-os razor --test                     # RAZOR quick test
+gov-os razor --gate api                 # API connectivity gate
+gov-os razor --gate compression         # Compression analysis gate
+gov-os razor --cohorts                  # List fraud cohorts
+```
+
+### Shipyard Commands
+
+```bash
+gov-os shipyard --status                # Program status
+gov-os shipyard --simulate              # Run simulation
+```
 
 ---
 
@@ -28,8 +188,8 @@ WarrantProof detects federal procurement fraud by measuring data complexity. Leg
 
 | Metric | Fraud Threshold | Legitimate Threshold | Source |
 |--------|-----------------|---------------------|--------|
-| Kolmogorov Complexity | K(x) < 0.65 | K(x) ≥ 0.75 | Compression physics |
-| Compression Ratio | < 0.50 | ≥ 0.80 | Shannon 1948 |
+| Kolmogorov Complexity | K(x) < 0.65 | K(x) >= 0.75 | Compression physics |
+| Compression Ratio | < 0.50 | >= 0.80 | Shannon 1948 |
 | RAF Cycle Length | 3-5 entities | N/A | Network topology |
 | ZKP Proof Size | 22 KB constant | N/A | Mina IVC |
 | Evidence Freshness | > 90 days = stale | < 30 days = fresh | v4.0 |
@@ -41,58 +201,88 @@ WarrantProof detects federal procurement fraud by measuring data complexity. Leg
 
 ### Core Detection (src/)
 
-| Module | Lines | Purpose |
-|--------|-------|---------|
-| core.py | 602 | Hash, receipts, citations, constants |
-| compress.py | 642 | Entropy compression analysis |
-| detect.py | 680 | Multi-stage anomaly detection |
-| kolmogorov.py | 339 | Algorithmic complexity |
-| zkp.py | 438 | Zero-knowledge proofs |
-| raf.py | 510 | Network cycle detection |
-| holographic.py | 810 | Boundary-only detection |
-| thompson.py | 474 | Bayesian audit sampling |
+| Module | Purpose |
+|--------|---------|
+| core.py | Hash, receipts, citations, constants |
+| compress.py | Entropy compression analysis |
+| detect.py | Multi-stage anomaly detection |
+| kolmogorov.py | Algorithmic complexity |
+| zkp.py | Zero-knowledge proofs |
+| raf.py | Network cycle detection |
+| holographic.py | Boundary-only detection |
+| thompson.py | Bayesian audit sampling |
 
 ### v4.0 User-Friendly (src/)
 
-| Module | Lines | Purpose |
-|--------|-------|---------|
-| insight.py | 380 | Plain-language explanations |
-| fitness.py | 340 | Self-improving pattern tracking |
-| guardian.py | 420 | Evidence quality gates |
-| freshness.py | 310 | Evidence staleness detection |
-| learner.py | 390 | Cross-domain pattern transfer |
+| Module | Purpose |
+|--------|---------|
+| insight.py | Plain-language explanations |
+| fitness.py | Self-improving pattern tracking |
+| guardian.py | Evidence quality gates |
+| freshness.py | Evidence staleness detection |
+| learner.py | Cross-domain pattern transfer |
+
+### Domains (src/domains/)
+
+| Domain | Purpose |
+|--------|---------|
+| defense | Defense spending, military contracts |
+| medicaid | Healthcare spending, provider payments |
 
 ### Shipyard (src/shipyard/)
 
-| Module | Lines | Purpose |
-|--------|-------|---------|
-| constants.py | 196 | Verified values with citations |
-| receipts.py | 591 | 8 shipbuilding receipt types |
-| lifecycle.py | 431 | Keel-to-delivery state machine |
-| assembly.py | 444 | Block welding + robotics |
-| additive.py | 381 | 3D printing validation |
-| iterate.py | 446 | SpaceX-style rapid iteration |
-| nuclear.py | 467 | SMR reactor installation |
-| procurement.py | 440 | Contract management |
-| sim_shipyard.py | 671 | Monte Carlo simulation |
+| Module | Purpose |
+|--------|---------|
+| constants.py | Verified values with citations |
+| receipts.py | 8 shipbuilding receipt types |
+| lifecycle.py | Keel-to-delivery state machine |
+| assembly.py | Block welding + robotics |
+| additive.py | 3D printing validation |
+| iterate.py | SpaceX-style rapid iteration |
+| nuclear.py | SMR reactor installation |
+| procurement.py | Contract management |
+| sim_shipyard.py | Monte Carlo simulation |
 
-### Integration (src/)
+### RAZOR (src/razor/)
 
-| Module | Lines | Purpose |
-|--------|-------|---------|
-| ledger.py | 400 | Merkle ledger + Bekenstein bounds |
-| bridge.py | 1,374 | Cross-branch translation |
-| sim.py | 1,356 | Scenario simulation engine |
-| usaspending_etl.py | 426 | Real data integration |
-| sam_validator.py | 447 | Vendor validation |
+| Module | Purpose |
+|--------|---------|
+| core.py | Constants, receipts, hashing |
+| cohorts.py | Historical fraud cohort definitions |
+| ingest.py | USASpending.gov API client |
+| physics.py | Kolmogorov complexity measurement |
+| validate.py | Statistical signal detection |
 
-**Total:** 29 modules, 20,000+ lines
+---
+
+## Domain Architecture
+
+Domains are plug-in modules that adapt the core physics engine to specific spending domains.
+
+### Domain Structure
+
+Each domain provides:
+- `config.yaml`: Domain configuration
+- `volatility.py`: Domain-specific volatility index
+- `schema.py`: Data schemas
+- `receipts.py`: Domain receipt types
+- `scenarios.py`: Domain scenarios
+- `data.py`: Simulated data generators
+
+### Adding a New Domain
+
+1. Create `src/domains/{name}/config.yaml`
+2. Implement `volatility.py` with `get_primary_volatility()`
+3. Implement `schema.py` with data schemas
+4. Implement `receipts.py` with receipt types
+5. Implement `scenarios.py` with test scenarios
+6. Register in `src/domains/__init__.py`
 
 ---
 
 ## Shipyard Module: Trump-Class Program
 
-The Shipyard module tracks the announced $200B, 22-ship battleship program using receipts-native accountability.
+The Shipyard module tracks the announced $200B, 22-ship battleship program.
 
 ### Program Constants (Cited)
 
@@ -101,21 +291,8 @@ The Shipyard module tracks the announced $200B, 22-ship battleship program using
 | TRUMP_CLASS_PROGRAM_COST_B | $200B | TRUMP_2025 |
 | TRUMP_CLASS_SHIP_COUNT | 22 ships | TRUMP_2025 |
 | TRUMP_CLASS_PER_SHIP_B | $9.09B/ship | Derived |
-| ELON_SPHERE_COST_REDUCTION | 50% | Combined analysis |
 | FORD_CVN78_OVERRUN_PCT | 23% | GAO_2022 |
 | ZUMWALT_COST_INCREASE_PCT | 81% | GAO_2018 |
-| DOD_FRAUD_CONFIRMED_B | $11B | GAO_2025 |
-| SHIPBUILDING_OVERRUN_2025_B | $10.4B | GAO_2025 |
-
-### Disruption Technologies
-
-| Technology | Savings | Citation |
-|------------|---------|----------|
-| Large Format Additive (LFAM) | 45% time, 40% weight | UMAINE_2025 |
-| Navy Additive Spares | 35% cost | NAVY_2025 |
-| Robotic Welding (COMAU) | 30% efficiency | COMAU_2024 |
-| SpaceX Starfactory Cadence | 1 week/unit | SPACEX_2025 |
-| NuScale SMR Propulsion | 77 MWe | NRC_2025 |
 
 ### Shipyard Receipt Types (8)
 
@@ -130,13 +307,30 @@ The Shipyard module tracks the announced $200B, 22-ship battleship program using
 | propulsion | Reactor installation | reactor_type, power_mwe |
 | delivery | Ship handoff | final_cost, variance_pct |
 
-### Detection Goals
+---
 
-| Metric | Historical | Target | Method |
-|--------|------------|--------|--------|
-| Overrun Detection | 23% variance | 12% variance | Compression tracking |
-| Weld Fraud | Ship 26 (too late) | Ship 10 | Block-level receipts |
-| Cost Prediction | ±40% | ±15% | Entropy modeling |
+## RAZOR Validation Engine
+
+RAZOR validates fraud detection against real USASpending.gov data using compression-based analysis.
+
+### The Paradigm
+
+```
+Corrupt markets are ordered. Order compresses.
+Honest markets are chaotic. Chaos resists compression.
+
+K(x) = len(compressed) / len(original)
+
+The compression ratio IS the proof.
+```
+
+### Historical Fraud Cohorts
+
+| Cohort | Years | Pattern | Expected Signal |
+|--------|-------|---------|-----------------|
+| Fat Leonard (GDMA) | 2006-2013 | Repetitive billing | Z < -2.0 |
+| TransDigm | 2015-2019 | Price gouging | Price/estimate > 2x |
+| Boeing/Druyun | 2000-2003 | Conflict of interest | Approval anomaly |
 
 ---
 
@@ -144,65 +338,35 @@ The Shipyard module tracks the announced $200B, 22-ship battleship program using
 
 ### Plain-Language Explanations (insight.py)
 
-Converts technical metrics to understandable summaries:
-
 ```
 Technical: compression_ratio=0.42, kolmogorov=0.38, entropy=5.2
 Plain: "This contract appears to involve copied or templated billing.
        The billing records show unusually repetitive patterns."
 ```
 
-### Self-Improving Detection (fitness.py)
-
-Patterns that reduce uncertainty survive. Patterns that add noise fade.
-
-| Fitness Score | Meaning | Action |
-|---------------|---------|--------|
-| > 0.5 | Excellent | Study for expansion |
-| > 0.3 | Good | Keep active |
-| > 0.1 | Acceptable | Monitor |
-| < 0 | Harmful | Prune |
-
-**Formula:** Fitness = (entropy_before - entropy_after) / receipts_processed
-
-### Evidence Quality Gates (guardian.py)
-
-| Gate | Threshold | Abstention Trigger |
-|------|-----------|-------------------|
-| Evidence Quality | < 0.30 confidence | insufficient_data |
-| Counter-Evidence | > 15% of total | conflicting_signals |
-| Evidence Freshness | > 90 days | stale_evidence |
-| Chain Integrity | < 90% valid | leak |
-
-**Abstention is valid.** The system says "I don't know" when evidence is weak.
-
 ### Evidence Freshness (freshness.py)
 
-| Level | Age | Confidence | Action |
-|-------|-----|------------|--------|
-| Fresh | < 30 days | 100% | Use freely |
-| Recent | 30-60 days | 90% | Use with note |
-| Aging | 60-90 days | 70% | Refresh for decisions |
-| Stale | 90-180 days | 40% | Refresh required |
-| Expired | > 180 days | 10% | Do not use |
-
-**Data type multipliers:** Price data expires 2x faster. Contract awards persist 2x longer.
+| Level | Age | Confidence |
+|-------|-----|------------|
+| Fresh | < 30 days | 100% |
+| Recent | 30-60 days | 90% |
+| Aging | 60-90 days | 70% |
+| Stale | 90-180 days | 40% |
+| Expired | > 180 days | 10% |
 
 ### Cross-Domain Pattern Transfer (learner.py)
 
-Known fraud patterns transferable across domains:
-
-| Pattern | Source Case | Domains | Transferability |
-|---------|-------------|---------|-----------------|
-| Repetitive Billing | Fat Leonard | logistics, maintenance, services | 85% |
-| Price Gouging | TransDigm | spare_parts, consumables | 90% |
-| Shell Company | General | all | 95% |
-| Conflict of Interest | Boeing/Druyun | major_contracts, sole_source | 75% |
-| Cost Escalation | General | construction, shipbuilding | 80% |
+| Pattern | Source Case | Transferability |
+|---------|-------------|-----------------|
+| Repetitive Billing | Fat Leonard | 85% |
+| Price Gouging | TransDigm | 90% |
+| Shell Company | General | 95% |
+| Conflict of Interest | Boeing/Druyun | 75% |
+| Cost Escalation | General | 80% |
 
 ---
 
-## Receipt Types (62 Total)
+## Receipt Types (67 Total)
 
 ### Core (12)
 warrant, quality_attestation, milestone, cost_variance, anchor, detection, compression, lineage, bridge, simulation, anomaly, violation
@@ -222,162 +386,42 @@ keel, block, additive, iteration, milestone, procurement, propulsion, delivery
 ### RAZOR (5)
 ingest, cohort, compression, validation, signal
 
----
-
-## SLO Thresholds
-
-### Performance
-
-| Operation | Threshold | Test |
-|-----------|-----------|------|
-| Warrant generation | ≤ 50ms | `assert time <= 50` |
-| Scan latency | ≤ 100ms/1000 receipts | `assert time <= 100` |
-| ZKP verification | ≤ 100ms | `assert time <= 100` |
-
-### Detection
-
-| Metric | Threshold | Test |
-|--------|-----------|------|
-| Detection recall | ≥ 90% | `assert recall >= 0.90` |
-| False positive rate | ≤ 5% | `assert fp_rate <= 0.05` |
-| Thompson FP rate | ≤ 2% | `assert fp_rate <= 0.02` |
-
-### Quality
-
-| Metric | Threshold | Test |
-|--------|-----------|------|
-| Merkle verification | 100% | `assert all_verify` |
-| Citation coverage | 100% | `assert all_cited` |
-| Lineage completeness | ≥ 95% | `assert completeness >= 0.95` |
+### Domain (5)
+domain_receipt, domain_simulation, domain_scenario, domain_validation, domain_volatility
 
 ---
 
-## Scenarios (12)
+## Scenarios
 
 ### Core Scenarios
 
 | Scenario | Purpose | Pass Criteria |
 |----------|---------|---------------|
-| BASELINE | Standard procurement | compression ≥ 0.85, recall ≥ 0.90 |
-| SHIPYARD_STRESS | Trump-class simulation | detect fraud by ship 10, predict ±15% |
+| BASELINE | Standard procurement | compression >= 0.85, recall >= 0.90 |
+| SHIPYARD_STRESS | Trump-class simulation | detect fraud by ship 10 |
 | CROSS_BRANCH_INTEGRATION | Multi-system | zero proof failures |
-| FRAUD_DISCOVERY | Novel patterns | legitimate ≥ 0.80, fraud ≤ 0.40 |
-| REAL_TIME_OVERSIGHT | Streaming | latency ≤ 100ms, alert ≤ 5s |
+| FRAUD_DISCOVERY | Novel patterns | legitimate >= 0.80, fraud <= 0.40 |
 | GODEL | Edge cases | no crashes, stoprules trigger |
+| AUTOCATALYTIC | Pattern emergence | N_critical < 10,000 |
+| THOMPSON | Bayesian calibration | FP <= 2% |
+| HOLOGRAPHIC | Boundary detection | p > 0.9999 |
 
-### Physics Scenarios
+### Domain Scenarios
 
-| Scenario | Purpose | Pass Criteria |
-|----------|---------|---------------|
-| AUTOCATALYTIC | Pattern emergence | N_critical < 10,000, coherence ≥ 0.80 |
-| THOMPSON | Bayesian calibration | FP ≤ 2%, variance converged |
-| HOLOGRAPHIC | Boundary detection | p > 0.9999, bits ≤ 2N |
-
-### Shipyard Scenarios
-
-| Scenario | Purpose | Pass Criteria |
-|----------|---------|---------------|
-| TRUMP_CLASS_BASELINE | Normal operation | variance ≤ 15%, receipts valid |
-| TRUMP_CLASS_DISRUPTION | Elon-sphere | 40-60% cost reduction |
-| WELD_FRAUD_INJECTION | Fraud detection | detect by ship 10 |
+Each domain provides:
+- BASELINE: Standard operation
+- STRESS: High volume
+- FRAUD_INJECTION: Synthetic fraud
 
 ---
 
-## Stoprules
+## Execution Gates
 
-### Critical (HALT)
-
-| Stoprule | Trigger | Action |
-|----------|---------|--------|
-| hash_mismatch | Merkle verification fails | HALT |
-| uncited_data | Missing citation | HALT |
-| zkp_verification_failed | ZKP proof invalid | HALT + reject |
-| data_unavailable | DA confidence < 99% | HALT + investigate |
-
-### Alert
-
-| Stoprule | Trigger | Action |
-|----------|---------|--------|
-| kolmogorov_anomaly | K(x) < 0.65 | Flag for review |
-| raf_cycle_detected | 3-5 entity cycle | Escalate |
-| cascade_imminent | dC/dt > threshold | Early warning |
-| stale_evidence | Age > 90 days | Require refresh |
-
-### Deviation
-
-| Stoprule | Trigger | Action |
-|----------|---------|--------|
-| entropy_gap_insufficient | ΔH < 0.15 | Fall back to v1 |
-| pattern_incoherent | Coherence < 0.80 | Wait for receipts |
-| abstention_triggered | Evidence weak | Return "unknown" |
-
----
-
-## Data Sources
-
-### Real Data Integration
-
-| Source | Module | Data Type |
-|--------|--------|-----------|
-| USASpending.gov | usaspending_etl.py | Awards, transactions |
-| SAM.gov | sam_validator.py | Vendor registration |
-
-### Validation Targets
-
-| Case | Years | Pattern | Expected Signal |
-|------|-------|---------|-----------------|
-| Fat Leonard (GDMA) | 2006-2013 | Repetitive billing | Z < -2.0 |
-| TransDigm | 2015-2019 | Price gouging | Price/estimate > 2x |
-| Boeing/Druyun | 2000-2003 | Conflict of interest | Approval anomaly |
-
----
-
-## CLI Commands
-
-```bash
-# Core
-python cli.py --test                    # Emit test receipt
-python cli.py scenario --run BASELINE   # Run scenario
-
-# v4.0 User-Friendly
-python cli.py explain --demo            # Plain-language demo
-python cli.py health                    # System health check
-python cli.py patterns --list           # View fraud patterns
-python cli.py freshness --demo          # Freshness demo
-```
-
----
-
-## File Structure
-
-```
-warrentproof/
-├── cli.py                  # Command-line interface
-├── spec.md                 # This specification
-├── ledger_schema.json      # 62 receipt type definitions
-├── CLAUDEME.md             # Execution standard
-├── CITATIONS.md            # Source references
-├── src/
-│   ├── core.py             # Foundation
-│   ├── insight.py          # v4.0 explanations
-│   ├── fitness.py          # v4.0 self-improvement
-│   ├── guardian.py         # v4.0 quality gates
-│   ├── freshness.py        # v4.0 staleness
-│   ├── learner.py          # v4.0 pattern transfer
-│   ├── kolmogorov.py       # Algorithmic complexity
-│   ├── compress.py         # Entropy analysis
-│   ├── detect.py           # Anomaly detection
-│   └── shipyard/           # Trump-class module
-│       ├── constants.py
-│       ├── receipts.py
-│       ├── lifecycle.py
-│       └── ...
-├── razor/                  # Kolmogorov validation engine
-└── tests/
-    ├── test_v4_modules.py
-    ├── test_shipyard_*.py
-    └── ...
-```
+| Gate | Requirement | Script |
+|------|-------------|--------|
+| T+2h | Skeleton working | `gate_t2h.sh` |
+| T+24h | MVP complete | `gate_t24h.sh` |
+| T+48h | Hardened | `gate_t48h.sh` |
 
 ---
 
@@ -386,27 +430,21 @@ warrentproof/
 ### Kolmogorov Complexity
 ```
 K(x) = compressed_size / original_size
-K(x) < 0.65 → likely generated/templated
-K(x) ≥ 0.75 → likely legitimate
+K(x) < 0.65 -> likely generated/templated
+K(x) >= 0.75 -> likely legitimate
 ```
 
 ### Entropy Fitness
 ```
 fitness = (H_before - H_after) / receipts_processed
-fitness > 0 → pattern reduces uncertainty
-fitness < 0 → pattern adds noise
+fitness > 0 -> pattern reduces uncertainty
+fitness < 0 -> pattern adds noise
 ```
 
 ### N_critical (Phase Transition)
 ```
-N_critical = log₂(1/ΔH) × (H_legit / ΔH)
+N_critical = log2(1/dH) x (H_legit / dH)
 When N > N_critical, patterns become distinguishable
-```
-
-### Bekenstein Bound
-```
-S ≤ BEKENSTEIN_BITS_PER_DOLLAR × amount_usd
-$1M transaction requires ≥ 1 bit of digital trail
 ```
 
 ---
@@ -420,7 +458,8 @@ $1M transaction requires ≥ 1 bit of digital trail
 | 3.0.0 | 2024-12-23 | OMEGA: Kolmogorov, ZKP, RAF, DA sampling |
 | 3.1.0 | 2024-12-23 | Shipyard: Trump-class, 8 receipt types |
 | 4.0.0 | 2024-12-23 | User-friendly: insight, fitness, guardian, freshness, learner |
+| 5.0.0 | 2024-12-23 | Unification: Single cohesive platform with domain modules |
 
 ---
 
-**⚠️ THIS IS A SIMULATION. NOT REAL DoD DATA. FOR RESEARCH ONLY. ⚠️**
+**THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY**
