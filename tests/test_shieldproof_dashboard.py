@@ -1,5 +1,5 @@
 """
-ShieldProof v2.0 Dashboard Module Tests
+ShieldProof v2.1 Dashboard Module Tests
 
 Tests for public audit trail dashboard.
 """

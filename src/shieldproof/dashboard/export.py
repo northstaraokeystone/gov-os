@@ -1,30 +1,99 @@
 """
-ShieldProof v2.0 Dashboard Module
+SHIELDPROOF v2.1 Dashboard Export - Dashboard Export Functions
 
-Public audit trail. Spending vs deliverables, redacted for OPSEC.
-Per Grok: "Open audit trail" - transparency that doesn't compromise security.
-
-"One receipt. One milestone. One truth."
+THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY
 """
 
 import csv
 import json
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from pathlib import Path
-from typing import Any
+from typing import Optional
 
-from .core import (
-    query_receipts,
-    TENANT_ID,
-    VERSION,
-)
-from .reconcile import reconcile_all, get_waste_summary
+from ..core import query_receipts, TENANT_ID, VERSION
+from ..contract import get_contract, get_contract_milestones
+from ..payment import total_paid, total_outstanding
+from ..reconcile import reconcile_all, get_waste_summary
+from .receipts import emit_dashboard_receipt
+
+
+def export_dashboard(format: str, output_path: str) -> dict:
+    """
+    Generate dashboard export (v2.1 API).
+    Emit dashboard_receipt.
+    Return receipt.
+
+    Args:
+        format: Export format ("json" | "html" | "csv")
+        output_path: Output file path
+
+    Returns:
+        Dashboard receipt
+    """
+    summary = generate_summary()
+    reports = reconcile_all()
+
+    if format == "json":
+        export_json(output_path)
+    elif format == "csv":
+        export_csv(output_path)
+    elif format == "html":
+        _export_html(output_path, summary, reports)
+    else:
+        raise ValueError(f"Unsupported format: {format}")
+
+    return emit_dashboard_receipt({
+        "export_format": format,
+        "output_path": output_path,
+        "contract_count": summary.get("total_contracts", 0),
+        "total_value_usd": summary.get("total_committed", 0),
+        "total_paid_usd": summary.get("total_paid", 0),
+        "contracts_over_variance": summary.get("contracts_overpaid", 0) + summary.get("contracts_unverified", 0),
+    })
+
+
+def dashboard_summary() -> dict:
+    """
+    Generate summary statistics (v2.1 API).
+
+    Returns:
+        Summary statistics dict
+    """
+    return generate_summary()
+
+
+def contracts_by_status() -> dict:
+    """
+    Group contracts by variance status (v2.1 API).
+
+    Returns:
+        Dict with contracts grouped by status
+    """
+    reports = reconcile_all()
+    result = {
+        "on_track": [],
+        "overpaid": [],
+        "unverified": [],
+        "disputed": [],
+    }
+
+    for report in reports:
+        status = report.get("status", "ON_TRACK")
+        if status == "ON_TRACK":
+            result["on_track"].append(report)
+        elif status == "OVERPAID":
+            result["overpaid"].append(report)
+        elif status == "UNVERIFIED_PAYMENT":
+            result["unverified"].append(report)
+        elif status == "DISPUTED":
+            result["disputed"].append(report)
+
+    return result
 
 
 def generate_summary() -> dict:
     """
-    Generate aggregate public summary of all contracts.
+    Generate aggregate public summary of all contracts (v2.0 API).
     Shows aggregate numbers, not individual contract details.
 
     Returns:
@@ -47,45 +116,15 @@ def generate_summary() -> dict:
         "contracts_overpaid": waste_summary["contracts_overpaid"],
         "contracts_unverified": waste_summary["contracts_unverified"],
         "contracts_disputed": waste_summary["contracts_disputed"],
-        "health_score": calculate_health_score(waste_summary),
+        "health_score": _calculate_health_score(waste_summary),
     }
 
     return summary
 
 
-def calculate_health_score(summary: dict) -> float:
-    """
-    Calculate an overall health score (0-100) for the portfolio.
-
-    Args:
-        summary: Waste summary dict
-
-    Returns:
-        Health score as percentage
-    """
-    if summary["total_contracts"] == 0:
-        return 100.0
-
-    # Factors: on_track %, no waste %, no disputes %
-    on_track_pct = summary["contracts_on_track"] / summary["total_contracts"]
-
-    if summary["total_paid"] > 0:
-        verified_pct = summary["total_verified"] / summary["total_paid"]
-    else:
-        verified_pct = 1.0
-
-    dispute_pct = 1 - (summary["contracts_disputed"] / summary["total_contracts"])
-
-    # Weighted average: 50% on_track, 30% verified, 20% no disputes
-    score = (on_track_pct * 0.5 + verified_pct * 0.3 + dispute_pct * 0.2) * 100
-
-    return round(score, 1)
-
-
 def contract_status(contract_id: str) -> dict:
     """
     Get single contract public view.
-    Requires authentication in production.
 
     Args:
         contract_id: Contract identifier
@@ -93,20 +132,16 @@ def contract_status(contract_id: str) -> dict:
     Returns:
         Contract status dict (redacted for OPSEC)
     """
-    from .contract import get_contract, get_contract_milestones
-    from .payment import total_paid, total_outstanding
-
     contract = get_contract(contract_id)
     if not contract:
         return {"error": "Contract not found", "contract_id": contract_id}
 
     milestones = get_contract_milestones(contract_id)
 
-    # Redact sensitive fields for public view
     return {
         "contract_id": contract_id,
         "contractor": contract.get("contractor"),
-        "amount_fixed": contract.get("amount_fixed"),
+        "amount_fixed": contract.get("amount_fixed", contract.get("total_value_usd")),
         "amount_paid": total_paid(contract_id),
         "amount_outstanding": total_outstanding(contract_id),
         "milestones": [
@@ -192,7 +227,7 @@ def print_dashboard() -> None:
     summary = generate_summary()
 
     print("\n" + "=" * 60)
-    print("SHIELDPROOF v2.0 - PUBLIC AUDIT DASHBOARD")
+    print("SHIELDPROOF v2.1 - PUBLIC AUDIT DASHBOARD")
     print("=" * 60)
     print(f"Generated: {summary['generated_at']}")
     print(f"Health Score: {summary['health_score']}%")
@@ -290,74 +325,80 @@ def check() -> bool:
         return False
 
 
-# === MODULE SELF-TEST ===
+# === PRIVATE HELPERS ===
 
-if __name__ == "__main__":
-    import sys
+def _calculate_health_score(summary: dict) -> float:
+    """Calculate an overall health score (0-100) for the portfolio."""
+    if summary["total_contracts"] == 0:
+        return 100.0
 
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--serve":
-            port = int(sys.argv[2]) if len(sys.argv) > 2 else 8080
-            serve(port)
-        elif sys.argv[1] == "--check":
-            if check():
-                print("Dashboard: OK")
-                sys.exit(0)
-            else:
-                print("Dashboard: FAIL")
-                sys.exit(1)
-        elif sys.argv[1] == "--export-csv":
-            filepath = sys.argv[2] if len(sys.argv) > 2 else "dashboard.csv"
-            export_csv(filepath)
-            print(f"Exported to {filepath}")
-        elif sys.argv[1] == "--export-json":
-            filepath = sys.argv[2] if len(sys.argv) > 2 else "dashboard.json"
-            export_json(filepath)
-            print(f"Exported to {filepath}")
-        else:
-            print_dashboard()
+    on_track_pct = summary["contracts_on_track"] / summary["total_contracts"]
+
+    if summary["total_paid"] > 0:
+        verified_pct = summary["total_verified"] / summary["total_paid"]
     else:
-        # Self-test
-        from .core import clear_ledger
-        from .contract import register_contract
-        from .milestone import submit_deliverable, verify_milestone
-        from .payment import release_payment
+        verified_pct = 1.0
 
-        print("# Dashboard module self-test", file=sys.stderr)
+    dispute_pct = 1 - (summary["contracts_disputed"] / summary["total_contracts"])
 
-        # Clear ledger for testing
-        clear_ledger()
+    # Weighted average: 50% on_track, 30% verified, 20% no disputes
+    score = (on_track_pct * 0.5 + verified_pct * 0.3 + dispute_pct * 0.2) * 100
 
-        # Create test data
-        c = register_contract(
-            contractor="ACME Defense",
-            amount=1000000.00,
-            milestones=[
-                {"id": "M1", "amount": 250000.00},
-                {"id": "M2", "amount": 750000.00},
-            ],
-            terms={},
-        )
-        submit_deliverable(c["contract_id"], "M1", b"Deliverable")
-        verify_milestone(c["contract_id"], "M1", "INSPECTOR", passed=True)
-        release_payment(c["contract_id"], "M1")
+    return round(score, 1)
 
-        # Test generate_summary
-        summary = generate_summary()
-        assert "generated_at" in summary
-        assert "total_contracts" in summary
-        print(f"# Summary generated: {summary['total_contracts']} contracts", file=sys.stderr)
 
-        # Test check
-        assert check() is True
-        print("# Health check: OK", file=sys.stderr)
+def _export_html(filepath: str, summary: dict, reports: list) -> None:
+    """Export dashboard to HTML."""
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>SHIELDPROOF v2.1 Dashboard</title>
+    <style>
+        body {{ font-family: monospace; padding: 20px; }}
+        table {{ border-collapse: collapse; width: 100%; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+        th {{ background-color: #333; color: white; }}
+        .on_track {{ background-color: #90EE90; }}
+        .overpaid {{ background-color: #FFB6C1; }}
+        .disputed {{ background-color: #FFD700; }}
+    </style>
+</head>
+<body>
+    <h1>SHIELDPROOF v2.1 - PUBLIC AUDIT DASHBOARD</h1>
+    <p>Generated: {summary['generated_at']}</p>
+    <p>Health Score: {summary['health_score']}%</p>
 
-        # Test contract_status
-        status = contract_status(c["contract_id"])
-        assert status["contract_id"] == c["contract_id"]
-        print(f"# Contract status: {status['amount_paid']}/{status['amount_fixed']}", file=sys.stderr)
+    <h2>Summary</h2>
+    <ul>
+        <li>Total Contracts: {summary['total_contracts']}</li>
+        <li>Total Committed: {format_currency(summary['total_committed'])}</li>
+        <li>Total Paid: {format_currency(summary['total_paid'])}</li>
+        <li>Waste Identified: {format_currency(summary['waste_identified'])}</li>
+    </ul>
 
-        # Test print_dashboard
-        print_dashboard()
-
-        print("# PASS: dashboard module self-test", file=sys.stderr)
+    <h2>Contracts</h2>
+    <table>
+        <tr>
+            <th>Contract ID</th>
+            <th>Contractor</th>
+            <th>Fixed Amount</th>
+            <th>Paid</th>
+            <th>Status</th>
+        </tr>
+"""
+    for report in reports:
+        status_class = report.get('status', 'ON_TRACK').lower().replace('_', '')
+        html += f"""        <tr class="{status_class}">
+            <td>{report.get('contract_id')}</td>
+            <td>{report.get('contractor')}</td>
+            <td>{format_currency(report.get('amount_fixed', 0))}</td>
+            <td>{format_currency(report.get('amount_paid', 0))}</td>
+            <td>{report.get('status')}</td>
+        </tr>
+"""
+    html += """    </table>
+</body>
+</html>
+"""
+    with open(filepath, "w") as f:
+        f.write(html)

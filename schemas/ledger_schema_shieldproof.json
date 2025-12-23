@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ShieldProof v2.0 Ledger Schema",
-  "description": "Minimal viable truth for defense accountability",
-  "version": "2.0.0",
+  "title": "ShieldProof v2.1 Ledger Schema",
+  "description": "Defense contract accountability - receipts-native tracking",
+  "version": "2.1.0",
 
   "hash_strategy": {
     "algorithm": ["SHA256", "BLAKE3"],
@@ -20,7 +20,7 @@
     "contract": {
       "description": "Fixed-price contract registration",
       "required_fields": ["contract_id", "contractor", "amount_fixed", "milestones", "terms_hash"],
-      "optional_fields": []
+      "optional_fields": ["contract_type"]
     },
     "milestone": {
       "description": "Deliverable tracking and verification",
@@ -28,9 +28,24 @@
       "optional_fields": ["deliverable_hash", "verifier_id", "verification_ts"]
     },
     "payment": {
-      "description": "Payment release on verification",
+      "description": "Payment release on verification (STOPRULE: requires verified milestone)",
       "required_fields": ["contract_id", "milestone_id", "amount", "payment_hash", "released_at"],
       "optional_fields": []
+    },
+    "variance": {
+      "description": "Contract budget variance tracking",
+      "required_fields": ["contract_id", "expected_usd", "actual_usd", "variance_pct", "status"],
+      "optional_fields": ["flagged", "reconciled_at"]
+    },
+    "dashboard": {
+      "description": "Dashboard export receipt",
+      "required_fields": ["export_format", "output_path", "contract_count", "total_value_usd"],
+      "optional_fields": ["total_paid_usd", "contracts_over_variance"]
+    },
+    "anchor": {
+      "description": "Merkle tree anchor receipt for batch verification",
+      "required_fields": ["merkle_root", "receipt_count", "receipts_hash"],
+      "optional_fields": ["chain_id", "block_height"]
     },
     "anomaly": {
       "description": "Stoprule violation receipt",
@@ -41,13 +56,17 @@
 
   "milestone_states": ["PENDING", "DELIVERED", "VERIFIED", "PAID", "DISPUTED"],
 
+  "contract_statuses": ["ACTIVE", "COMPLETED", "ON_HOLD", "TERMINATED"],
+
+  "variance_statuses": ["ON_TRACK", "OVER_BUDGET", "CRITICAL", "WASTE_IDENTIFIED"],
+
   "base_receipt_schema": {
     "type": "object",
     "required": ["receipt_type", "ts", "tenant_id", "payload_hash"],
     "properties": {
       "receipt_type": {
         "type": "string",
-        "enum": ["contract", "milestone", "payment", "anomaly"]
+        "enum": ["contract", "milestone", "payment", "variance", "dashboard", "anchor", "anomaly"]
       },
       "ts": {
         "type": "string",
@@ -67,15 +86,31 @@
     }
   },
 
+  "stoprules": {
+    "payment_without_verification": {
+      "description": "Block payment release if milestone not VERIFIED",
+      "action": "HALT",
+      "exception": "StopRuleException"
+    }
+  },
+
+  "variance_thresholds": {
+    "warning": 0.05,
+    "critical": 0.15,
+    "description": "5% warning, 15% critical variance thresholds"
+  },
+
   "slo_thresholds": {
-    "receipt_latency_ms": 10.0,
-    "verify_latency_ms": 50.0,
-    "dashboard_refresh_s": 60.0
+    "contract_registration_ms": 100.0,
+    "milestone_verification_ms": 50.0,
+    "payment_release_ms": 200.0,
+    "dashboard_generation_s": 2.0,
+    "receipt_latency_ms": 10.0
   },
 
   "storage": {
     "format": "jsonl",
-    "file": "receipts.jsonl",
+    "file": "shieldproof_receipts.jsonl",
     "append_only": true
   }
 }

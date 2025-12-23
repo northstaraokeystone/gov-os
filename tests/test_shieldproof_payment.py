@@ -1,5 +1,5 @@
 """
-ShieldProof v2.0 Payment Module Tests
+ShieldProof v2.1 Payment Module Tests
 
 Tests for payment release on verification.
 """
