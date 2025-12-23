@@ -1,5 +1,5 @@
 """
-ShieldProof v2.0 Milestone Module Tests
+ShieldProof v2.1 Milestone Module Tests
 
 Tests for milestone tracking and verification.
 """

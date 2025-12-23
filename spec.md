@@ -301,15 +301,22 @@ gov-os/
 │   ├── razor/                          # Kolmogorov validation engine
 │   │   └── ...
 │   │
-│   └── shieldproof/                    # Defense contract accountability (v2.0)
-│       ├── __init__.py                 # Package exports
+│   └── shieldproof/                    # Defense contract accountability (v2.1)
+│       ├── __init__.py                 # Package exports (backward compatible)
 │       ├── spec.md                     # Module specification
-│       ├── core.py                     # Foundation: dual_hash, emit_receipt, merkle
-│       ├── contract.py                 # Fixed-price contract registration
-│       ├── milestone.py                # Deliverable tracking and verification
-│       ├── payment.py                  # Payment release on verified milestones
-│       ├── reconcile.py                # Automated waste detection
-│       └── dashboard.py                # Public audit trail dashboard
+│       ├── core/                       # Shared infrastructure
+│       │   ├── constants.py            # VERSION, TENANT_ID, RECEIPT_TYPES
+│       │   ├── utils.py                # dual_hash, merkle, StopRule
+│       │   ├── receipt.py              # emit_receipt, validate_receipt
+│       │   ├── ledger.py               # load_ledger, query_receipts
+│       │   ├── anchor.py               # anchor_receipt, anchor_chain
+│       │   └── gate.py                 # check_t2h, check_t24h, check_t48h
+│       ├── contract/                   # Contract registration
+│       ├── milestone/                  # Deliverable tracking
+│       ├── payment/                    # Payment release (STOPRULE enforced)
+│       ├── reconcile/                  # Variance tracking
+│       ├── dashboard/                  # Public audit trail
+│       └── scenarios/                  # Baseline and stress tests
 │
 ├── schemas/                            # Ledger schema definitions
 │   ├── ledger_schema_domains.json
@@ -342,13 +349,11 @@ gov-os/
 │   ├── test_shieldproof_payment.py     # ShieldProof payment tests
 │   ├── test_shieldproof_reconcile.py   # ShieldProof reconcile tests
 │   ├── test_shieldproof_dashboard.py   # ShieldProof dashboard tests
+│   ├── test_shieldproof_scenarios.py   # ShieldProof scenarios tests
 │   └── ...
 │
 ├── scripts/                            # Execution scripts
-│   └── shieldproof/                    # ShieldProof gate scripts
-│       ├── gate_t2h.sh                 # T+2h skeleton gate
-│       ├── gate_t24h.sh                # T+24h MVP gate
-│       └── gate_t48h.sh                # T+48h hardened gate
+│   └── ...                             # (ShieldProof gates consolidated to gate.sh)
 │
 ├── shieldproof_cli.py                  # ShieldProof standalone CLI
 └── shieldproof_receipts.jsonl          # ShieldProof ledger file
@@ -613,26 +618,44 @@ Every module in `modules/` implements this interface:
 - `protect_whistleblower(report)` - ZK attestation protecting identity
 - `measure_staffing_impact(case_id)` - Measure staffing changes impact
 
-### shieldproof/ (ShieldProof v2.0)
+### shieldproof/ (ShieldProof v2.1)
 
 **Purpose:** Minimal viable truth for defense contract accountability. Payment follows verification.
 
 **Philosophy:** "One receipt. One milestone. One truth."
 
+**Structure (v2.1 Modular):**
+```
+shieldproof/
+├── core/       # Shared infrastructure (constants, utils, receipt, ledger, anchor, gate)
+├── contract/   # Contract registration
+├── milestone/  # Deliverable tracking
+├── payment/    # Payment release (STOPRULE enforced)
+├── reconcile/  # Variance tracking
+├── dashboard/  # Public audit trail
+└── scenarios/  # Baseline and stress tests
+```
+
 | Constant | Value | Description |
 |----------|-------|-------------|
 | TENANT_ID | "shieldproof" | Module identifier |
-| VERSION | "2.0.0" | Current version |
-| RECEIPT_TYPES | contract, milestone, payment | Core receipt types |
+| VERSION | "2.1.0" | Current version |
+| RECEIPT_TYPES | 7 types | contract, milestone, payment, variance, dashboard, anchor, anomaly |
 | LEDGER_PATH | shieldproof_receipts.jsonl | Append-only ledger |
+| VARIANCE_THRESHOLD | 0.05 | 5% warning threshold |
+| VARIANCE_CRITICAL | 0.15 | 15% critical threshold |
 
-**Receipt Types:**
+**Receipt Types (v2.1):**
 
 | Type | Purpose | Key Fields |
 |------|---------|------------|
 | `contract` | Register fixed-price contract | contract_id, contractor, amount_fixed, milestones[], terms_hash |
 | `milestone` | Track deliverable verification | contract_id, milestone_id, deliverable_hash, status, verifier_id |
 | `payment` | Release payment on verification | contract_id, milestone_id, amount, payment_hash, released_at |
+| `variance` | Contract budget tracking | contract_id, expected_usd, actual_usd, variance_pct, status |
+| `dashboard` | Dashboard export | export_format, output_path, contract_count, total_value_usd |
+| `anchor` | Merkle tree anchor | merkle_root, receipt_count, receipts_hash |
+| `anomaly` | Stoprule violation | metric, delta, action |
 
 **Milestone States:**
 
@@ -646,33 +669,38 @@ PENDING → DELIVERED → VERIFIED → PAID
 - `submit_deliverable(contract_id, milestone_id, deliverable)` - Submit milestone deliverable
 - `verify_milestone(contract_id, milestone_id, verifier_id, passed)` - Verify milestone
 - `release_payment(contract_id, milestone_id)` - Release payment ONLY on VERIFIED milestones
-- `reconcile_contract(contract_id)` - Compare spend vs deliverables
+- `check_variance(contract_id)` - Check contract budget variance
+- `reconcile_all()` - Reconcile all contracts
 - `generate_summary()` - Public dashboard summary
+- `run_baseline_scenario(n_contracts)` - Standard flow test
+- `run_stress_scenario(n_contracts)` - Throughput test
 
 **Stoprules:**
 
 | Rule | Trigger | Action |
 |------|---------|--------|
-| stoprule_duplicate_contract | contract_id exists | Emit anomaly |
-| stoprule_invalid_amount | amount ≤ 0 or milestones don't sum | Emit anomaly |
-| stoprule_unverified_milestone | payment on non-VERIFIED | HALT execution |
-| stoprule_overpayment | paid > verified amount | Emit anomaly |
+| stoprule_duplicate_contract | contract_id exists | Raise StopRule |
+| stoprule_invalid_amount | amount ≤ 0 or milestones don't sum | Raise StopRule |
+| stoprule_unverified_milestone | payment on non-VERIFIED | **HALT** (StopRuleException) |
+| stoprule_already_paid | milestone already PAID | Raise StopRule |
 
-**SLOs:**
+**SLOs (v2.1):**
 
 | Operation | Target |
 |-----------|--------|
+| Contract registration | ≤ 100ms |
+| Milestone verification | ≤ 150ms |
+| Payment release | ≤ 200ms |
+| Dashboard generation | ≤ 2s |
 | Receipt emission | ≤ 10ms |
-| Verification | ≤ 50ms |
-| Dashboard refresh | ≤ 60s |
 
-**What Was Killed (v1.0 → v2.0):**
-- ZK-SNARKs (latency suicide)
-- PQC signatures (overkill)
-- Entropy detection (physics theater)
-- RAF cycles (no predictive power)
-- Holographic bounds (Bekenstein applies to horizons, not budgets)
-- Microsecond latency targets (unrealistic)
+**Gate Timelines:**
+
+| Gate | Requirements |
+|------|--------------|
+| T+2h | Files exist, imports work, dual_hash format |
+| T+24h | Baseline scenario passes, tests pass |
+| T+48h | Stress scenario passes, STOPRULE enforced |
 
 ---
 
@@ -911,6 +939,7 @@ When L4 >= 99.9% and L4 feeds back to L0:
 | 5.1.0 | 2024-12-23 | Temporal: Decay physics, resistance detection, cross-domain contagion |
 | 6.0.0 | 2024-12-23 | ProofChain: 12 modules unified, contagion, gate, loop, zk |
 | 6.1.0 | 2024-12-23 | ShieldProof v2.0: Defense contract accountability, "One receipt. One milestone. One truth." |
+| 6.2.0 | 2024-12-23 | ShieldProof v2.1: Modular architecture, 7 receipt types, variance tracking, scenarios, consolidated gates |
 
 ---
 

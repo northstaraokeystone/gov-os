@@ -1,31 +1,24 @@
 """
-ShieldProof v2.0 Contract Module
+SHIELDPROOF v2.1 Contract Register - Contract Registration Functions
 
-Register contracts with fixed-price terms and milestone definitions.
-Per Grok: "Fixed-price everything" - the SpaceX model.
-
-"One receipt. One milestone. One truth."
+THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY
 """
 
 import json
 import uuid
-from typing import Any
+from typing import Optional
 
-from .core import (
-    dual_hash,
-    emit_receipt,
-    query_receipts,
-    StopRule,
-    TENANT_ID,
-)
+from ..core import dual_hash, query_receipts, StopRule
+from .receipts import emit_contract_receipt
 
 
 def register_contract(
     contractor: str,
     amount: float,
-    milestones: list[dict],
+    milestones: list,
     terms: dict,
-    contract_id: str | None = None,
+    contract_id: Optional[str] = None,
+    contract_type: str = "fixed-price",
 ) -> dict:
     """
     Register a fixed-price contract with milestone definitions.
@@ -36,6 +29,7 @@ def register_contract(
         milestones: List of milestone dicts with id, description, amount, due_date
         terms: Contract terms dict (will be hashed)
         contract_id: Optional contract ID (generated if not provided)
+        contract_type: Contract type (default: fixed-price)
 
     Returns:
         contract_receipt
@@ -50,16 +44,16 @@ def register_contract(
     # Stoprule: Check for duplicate
     existing = query_receipts("contract", contract_id=contract_id)
     if existing:
-        return stoprule_duplicate_contract(contract_id)
+        _stoprule_duplicate_contract(contract_id)
 
     # Stoprule: Validate amount
     if amount <= 0:
-        return stoprule_invalid_amount(contract_id, "Amount must be positive")
+        _stoprule_invalid_amount(contract_id, "Amount must be positive")
 
     # Stoprule: Validate milestones sum to amount
     milestone_sum = sum(m.get("amount", 0) for m in milestones)
     if abs(milestone_sum - amount) > 0.01:  # Allow for floating point tolerance
-        return stoprule_invalid_amount(
+        _stoprule_invalid_amount(
             contract_id,
             f"Milestone sum ({milestone_sum}) does not equal contract amount ({amount})"
         )
@@ -76,18 +70,24 @@ def register_contract(
         })
 
     # Create contract receipt
-    receipt = emit_receipt("contract", {
+    receipt = emit_contract_receipt({
         "contract_id": contract_id,
         "contractor": contractor,
+        "contractor_name": contractor,  # v2.1 field name
+        "contract_type": contract_type,
         "amount_fixed": amount,
+        "total_value_usd": amount,  # v2.1 field name
         "milestones": normalized_milestones,
+        "milestone_count": len(normalized_milestones),
         "terms_hash": dual_hash(json.dumps(terms, sort_keys=True)),
+        "start_date": terms.get("start_date"),
+        "end_date": terms.get("end_date"),
     })
 
     return receipt
 
 
-def get_contract(contract_id: str) -> dict | None:
+def get_contract(contract_id: str) -> Optional[dict]:
     """
     Retrieve contract by ID.
 
@@ -104,17 +104,21 @@ def get_contract(contract_id: str) -> dict | None:
     return contracts[-1]
 
 
-def list_contracts(status: str | None = None) -> list[dict]:
+def list_contracts(status: Optional[str] = None, contract_type: Optional[str] = None) -> list:
     """
-    List all contracts, optionally filtered by milestone status.
+    List all contracts, optionally filtered by milestone status or contract type.
 
     Args:
         status: Optional milestone status filter
+        contract_type: Optional contract type filter
 
     Returns:
         List of contract receipts
     """
     contracts = query_receipts("contract")
+
+    if contract_type is not None:
+        contracts = [c for c in contracts if c.get("contract_type") == contract_type]
 
     if status is None:
         return contracts
@@ -129,7 +133,7 @@ def list_contracts(status: str | None = None) -> list[dict]:
     return filtered
 
 
-def get_contract_milestones(contract_id: str) -> list[dict]:
+def get_contract_milestones(contract_id: str) -> list:
     """
     Get current milestone states for a contract.
     Merges original contract milestones with any milestone receipts.
@@ -163,11 +167,35 @@ def get_contract_milestones(contract_id: str) -> list[dict]:
     return list(milestones.values())
 
 
+def update_contract(contract_id: str, updates: dict) -> dict:
+    """
+    Update contract (emits new receipt with updates).
+
+    Args:
+        contract_id: Contract identifier
+        updates: Fields to update
+
+    Returns:
+        Updated contract receipt
+    """
+    contract = get_contract(contract_id)
+    if not contract:
+        _stoprule_unknown_contract(contract_id)
+
+    # Merge updates
+    updated = {**contract, **updates, "contract_id": contract_id}
+
+    # Emit new receipt
+    receipt = emit_contract_receipt(updated)
+    return receipt
+
+
 # === STOPRULES ===
 
-def stoprule_duplicate_contract(contract_id: str) -> dict:
+def _stoprule_duplicate_contract(contract_id: str) -> None:
     """Emit anomaly receipt for duplicate contract."""
-    receipt = emit_receipt("anomaly", {
+    from ..core import emit_receipt
+    emit_receipt("anomaly", {
         "metric": "duplicate_contract",
         "contract_id": contract_id,
         "delta": -1,
@@ -177,9 +205,10 @@ def stoprule_duplicate_contract(contract_id: str) -> dict:
     raise StopRule(f"Duplicate contract: {contract_id} already exists")
 
 
-def stoprule_invalid_amount(contract_id: str, reason: str) -> dict:
+def _stoprule_invalid_amount(contract_id: str, reason: str) -> None:
     """Emit anomaly receipt for invalid amount."""
-    receipt = emit_receipt("anomaly", {
+    from ..core import emit_receipt
+    emit_receipt("anomaly", {
         "metric": "invalid_amount",
         "contract_id": contract_id,
         "reason": reason,
@@ -190,54 +219,14 @@ def stoprule_invalid_amount(contract_id: str, reason: str) -> dict:
     raise StopRule(f"Invalid amount for {contract_id}: {reason}")
 
 
-# === MODULE SELF-TEST ===
-
-if __name__ == "__main__":
-    import sys
-    from .core import clear_ledger
-
-    print("# Contract module self-test", file=sys.stderr)
-
-    # Clear ledger for testing
-    clear_ledger()
-
-    # Test contract registration
-    r = register_contract(
-        contractor="ACME Defense",
-        amount=1000000.00,
-        milestones=[
-            {"id": "M1", "description": "Design review", "amount": 250000.00},
-            {"id": "M2", "description": "Prototype delivery", "amount": 750000.00},
-        ],
-        terms={"payment_terms": "net30"},
-    )
-    assert r["receipt_type"] == "contract"
-    assert r["contractor"] == "ACME Defense"
-    assert r["amount_fixed"] == 1000000.00
-    print(f"# Contract registered: {r['contract_id']}", file=sys.stderr)
-
-    # Test get_contract
-    c = get_contract(r["contract_id"])
-    assert c is not None
-    assert c["contract_id"] == r["contract_id"]
-    print(f"# Contract retrieved: {c['contract_id']}", file=sys.stderr)
-
-    # Test list_contracts
-    contracts = list_contracts()
-    assert len(contracts) >= 1
-    print(f"# Contracts listed: {len(contracts)}", file=sys.stderr)
-
-    # Test duplicate stoprule
-    try:
-        register_contract(
-            contractor="ACME Defense",
-            amount=1000000.00,
-            milestones=[{"id": "M1", "amount": 1000000.00}],
-            terms={},
-            contract_id=r["contract_id"],
-        )
-        print("# FAIL: Should have raised StopRule", file=sys.stderr)
-    except StopRule as e:
-        print(f"# Stoprule triggered correctly: {e}", file=sys.stderr)
-
-    print("# PASS: contract module self-test", file=sys.stderr)
+def _stoprule_unknown_contract(contract_id: str) -> None:
+    """Emit anomaly receipt for unknown contract."""
+    from ..core import emit_receipt
+    emit_receipt("anomaly", {
+        "metric": "unknown_contract",
+        "contract_id": contract_id,
+        "delta": -1,
+        "action": "reject",
+        "classification": "violation",
+    })
+    raise StopRule(f"Unknown contract: {contract_id}")

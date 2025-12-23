@@ -107,6 +107,28 @@ assert TENANT_ID, 'RAZOR TENANT_ID not set'
 print(f'✓ RAZOR module: {TENANT_ID}')
 "
 
+    # SHIELDPROOF
+    echo ""
+    echo "Checking SHIELDPROOF module..."
+    [ -d src/shieldproof ] || { echo "FAIL: no src/shieldproof/"; exit 1; }
+    echo "✓ src/shieldproof/ exists"
+
+    [ -d src/shieldproof/core ] || { echo "FAIL: no src/shieldproof/core/"; exit 1; }
+    echo "✓ src/shieldproof/core/ exists"
+
+    [ -f schemas/ledger_schema_shieldproof.json ] || { echo "FAIL: no schemas/ledger_schema_shieldproof.json"; exit 1; }
+    echo "✓ ledger_schema_shieldproof.json exists"
+
+    [ -f shieldproof_cli.py ] || { echo "FAIL: no shieldproof_cli.py"; exit 1; }
+    echo "✓ shieldproof_cli.py exists"
+
+    python -c "
+from src.shieldproof.core import dual_hash, emit_receipt, merkle, TENANT_ID, VERSION
+assert TENANT_ID == 'shieldproof', 'SHIELDPROOF TENANT_ID not set'
+assert ':' in dual_hash('test'), 'dual_hash must return SHA256:BLAKE3 format'
+print(f'✓ SHIELDPROOF v{VERSION}: {TENANT_ID}')
+"
+
     echo ""
     echo "=== PASS: T+2h Gate ==="
 }
@@ -167,6 +189,17 @@ from src.domain import load_domain, list_domains
 for d in list_domains():
     config = load_domain(d)
     print(f'✓ Domain {d}: {config.name}')
+"
+
+    # SHIELDPROOF baseline scenario
+    echo ""
+    echo "Running SHIELDPROOF baseline scenario..."
+    python -c "
+from src.shieldproof.scenarios import run_baseline_scenario
+result = run_baseline_scenario(n_contracts=5)
+assert result['passed'], f'Baseline scenario failed: {result.get(\"errors\")}'
+m = result['metrics']
+print(f'✓ SHIELDPROOF baseline: {m[\"contracts_registered\"]} contracts, {m[\"receipts_generated\"]} receipts in {m[\"elapsed_seconds\"]}s')
 "
 
     echo ""
@@ -244,6 +277,33 @@ r = run_simulation(SimConfig(n_cycles=100, n_transactions_per_cycle=100))
 current, peak = tracemalloc.get_traced_memory()
 tracemalloc.stop()
 print(f'✓ Memory: current={current/1024/1024:.1f}MB, peak={peak/1024/1024:.1f}MB')
+"
+
+    # SHIELDPROOF stress scenario
+    echo ""
+    echo "Running SHIELDPROOF stress scenario..."
+    python -c "
+from src.shieldproof.scenarios import run_stress_scenario
+result = run_stress_scenario(n_contracts=50)
+assert result['passed'], f'Stress scenario failed: {result.get(\"errors\")}'
+m = result['metrics']
+tp = result['throughput_per_sec']
+print(f'✓ SHIELDPROOF stress: {m[\"contracts_registered\"]} contracts, {tp:.1f} receipts/sec')
+"
+
+    # SHIELDPROOF STOPRULE test
+    echo ""
+    echo "Testing SHIELDPROOF STOPRULE..."
+    python -c "
+from src.shieldproof import register_contract, release_payment, clear_ledger, StopRule
+clear_ledger()
+c = register_contract('TestContractor', 100000.0, [{'id': 'M1', 'description': 'Test', 'amount': 100000.0}], {})
+try:
+    release_payment(c['contract_id'], 'M1')
+    print('FAIL: STOPRULE did not block unverified payment')
+    exit(1)
+except StopRule:
+    print('✓ SHIELDPROOF STOPRULE: Payment blocked for unverified milestone')
 "
 
     echo ""

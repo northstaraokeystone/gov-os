@@ -1,5 +1,5 @@
 """
-ShieldProof v2.0 Core Module Tests
+ShieldProof v2.1 Core Module Tests
 
 Tests for dual_hash, emit_receipt, merkle.
 """
@@ -172,11 +172,15 @@ class TestConstants:
         assert TENANT_ID == "shieldproof"
 
     def test_receipt_types(self):
-        """RECEIPT_TYPES should have 3 types."""
-        assert len(RECEIPT_TYPES) == 3
+        """RECEIPT_TYPES should have 7 types in v2.1."""
+        assert len(RECEIPT_TYPES) == 7
         assert "contract" in RECEIPT_TYPES
         assert "milestone" in RECEIPT_TYPES
         assert "payment" in RECEIPT_TYPES
+        assert "anomaly" in RECEIPT_TYPES
+        assert "variance" in RECEIPT_TYPES
+        assert "dashboard" in RECEIPT_TYPES
+        assert "anchor" in RECEIPT_TYPES
 
     def test_milestone_states(self):
         """MILESTONE_STATES should have 5 states."""
@@ -188,8 +192,8 @@ class TestConstants:
         assert "DISPUTED" in MILESTONE_STATES
 
     def test_version(self):
-        """VERSION should be 2.0.0."""
-        assert VERSION == "2.0.0"
+        """VERSION should be 2.1.0."""
+        assert VERSION == "2.1.0"
 
 
 class TestStopRule:

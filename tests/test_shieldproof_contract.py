@@ -1,5 +1,5 @@
 """
-ShieldProof v2.0 Contract Module Tests
+ShieldProof v2.1 Contract Module Tests
 
 Tests for contract registration and management.
 """
