@@ -1,0 +1,203 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WarrantProof Shipyard Ledger Schema",
+  "description": "Schema for shipyard-specific receipts - SIMULATION ONLY",
+  "version": "1.0.0",
+  "disclaimer": "THIS IS A SIMULATION. NOT REAL DoD DATA. FOR RESEARCH ONLY.",
+
+  "shipyard_tenant_id": "warrantproof-shipyard",
+
+  "hash_strategy": {
+    "algorithm": ["SHA256", "BLAKE3"],
+    "format": "sha256hex:blake3hex",
+    "description": "Dual-hash per CLAUDEME section 8"
+  },
+
+  "merkle_strategy": {
+    "algorithm": "BLAKE3",
+    "tree_type": "binary",
+    "empty_hash": "dual_hash(b'empty')"
+  },
+
+  "receipt_types": {
+    "keel": {
+      "description": "Keel laying ceremony marking construction start",
+      "required_fields": ["ship_id", "yard_id", "keel_ts", "coordinates"],
+      "optional_fields": ["material_hash", "ceremony_attendees"],
+      "emitted_by": "lifecycle.py"
+    },
+    "block": {
+      "description": "Block assembly with weld count and quality tracking",
+      "required_fields": ["block_id", "ship_id", "weld_count", "inspector_id"],
+      "optional_fields": ["pass_rate", "weld_hashes", "weld_merkle_root"],
+      "emitted_by": "assembly.py"
+    },
+    "additive": {
+      "description": "3D printed section with layer validation",
+      "required_fields": ["part_id", "printer_id", "material_kg", "print_hours"],
+      "optional_fields": ["qa_hash", "layer_count", "layer_hashes", "part_merkle_root"],
+      "emitted_by": "additive.py"
+    },
+    "additive_batch": {
+      "description": "Batch of additively manufactured parts",
+      "required_fields": ["ship_id", "part_count", "total_mass_kg"],
+      "optional_fields": ["part_ids", "batch_merkle_root"],
+      "emitted_by": "additive.py"
+    },
+    "iteration": {
+      "description": "SpaceX-style rapid iteration cycle",
+      "required_fields": ["cycle_id", "ship_id", "changes_count", "time_delta_days"],
+      "optional_fields": ["change_descriptions", "parallel_factor", "cadence_per_month"],
+      "emitted_by": "iterate.py"
+    },
+    "milestone": {
+      "description": "Program milestone completion",
+      "required_fields": ["milestone_id", "ship_id", "completion_pct", "phase"],
+      "optional_fields": ["variance_days", "blocker_receipts", "on_schedule"],
+      "emitted_by": "lifecycle.py"
+    },
+    "procurement": {
+      "description": "Contract creation or modification",
+      "required_fields": ["contract_id", "vendor_id", "amount_usd", "contract_type"],
+      "optional_fields": ["change_order_count", "cumulative_variance_pct", "entropy_direction"],
+      "emitted_by": "procurement.py"
+    },
+    "change_order": {
+      "description": "Contract modification record",
+      "required_fields": ["contract_id", "change_order_id", "amount_delta"],
+      "optional_fields": ["reason", "variance_pct", "new_total"],
+      "emitted_by": "procurement.py"
+    },
+    "contract_summary": {
+      "description": "Contract completion summary",
+      "required_fields": ["contract_id", "vendor_id", "final_amount_usd"],
+      "optional_fields": ["overrun_pct", "entropy_direction"],
+      "emitted_by": "procurement.py"
+    },
+    "propulsion": {
+      "description": "Nuclear reactor installation and testing",
+      "required_fields": ["reactor_id", "ship_id", "power_mwe"],
+      "optional_fields": ["test_hash", "nrc_cert_chain", "propulsion_type"],
+      "emitted_by": "nuclear.py"
+    },
+    "nrc_certification": {
+      "description": "NRC certification step completion",
+      "required_fields": ["reactor_id", "certification_step", "cert_hash"],
+      "optional_fields": ["step_index", "total_steps", "status"],
+      "emitted_by": "nuclear.py"
+    },
+    "delivery": {
+      "description": "Final ship delivery with cost summary",
+      "required_fields": ["ship_id", "yard_id", "final_cost_usd", "total_days"],
+      "optional_fields": ["baseline_cost_usd", "baseline_days", "cost_overrun_pct", "schedule_overrun_pct", "receipt_merkle_root"],
+      "emitted_by": "lifecycle.py"
+    },
+    "cycle": {
+      "description": "Simulation cycle receipt",
+      "required_fields": ["cycle", "active_ships", "completed_ships"],
+      "optional_fields": ["entropy", "total_receipts"],
+      "emitted_by": "sim_shipyard.py"
+    }
+  },
+
+  "base_receipt_schema": {
+    "type": "object",
+    "required": ["receipt_type", "ts", "tenant_id", "payload_hash"],
+    "properties": {
+      "receipt_type": {
+        "type": "string",
+        "description": "Type of receipt"
+      },
+      "ts": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO8601 timestamp"
+      },
+      "tenant_id": {
+        "type": "string",
+        "default": "warrantproof-shipyard",
+        "description": "Tenant identifier for isolation"
+      },
+      "payload_hash": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}:[a-f0-9]{64}$",
+        "description": "SHA256:BLAKE3 dual-hash"
+      },
+      "simulation_flag": {
+        "type": "string",
+        "const": "THIS IS A SIMULATION. NOT REAL DoD DATA. FOR RESEARCH ONLY.",
+        "description": "Required disclaimer"
+      }
+    }
+  },
+
+  "lifecycle_phases": [
+    "DESIGN",
+    "KEEL_LAYING",
+    "BLOCK_ASSEMBLY",
+    "LAUNCH",
+    "FITTING_OUT",
+    "SEA_TRIALS",
+    "DELIVERY"
+  ],
+
+  "disruption_levels": [
+    "traditional",
+    "hybrid",
+    "elon"
+  ],
+
+  "contract_types": [
+    "fixed_price",
+    "cost_plus",
+    "hybrid"
+  ],
+
+  "weld_grades": [
+    "A",
+    "B",
+    "C",
+    "FAIL"
+  ],
+
+  "marine_certified_materials": [
+    "HDPE",
+    "CF-PEEK",
+    "316L_SS",
+    "INCONEL_625",
+    "AL_5083"
+  ],
+
+  "slo_thresholds": {
+    "receipt_emission_ms": 50,
+    "phase_advance_ms": 100,
+    "weld_inspection_ms": 10,
+    "entropy_calculation_ms": 50,
+    "early_detection_pct": 12,
+    "historical_detection_pct": 23,
+    "weld_pass_rate_min": 0.95,
+    "compression_fraud_threshold": 0.70
+  },
+
+  "simulation_scenarios": [
+    "SCENARIO_BASELINE",
+    "SCENARIO_ELON_DISRUPTION",
+    "SCENARIO_HYBRID",
+    "SCENARIO_FRAUD_INJECTION",
+    "SCENARIO_EARLY_DETECTION",
+    "SCENARIO_NUCLEAR"
+  ],
+
+  "constants": {
+    "trump_class_program_cost_b": 200.0,
+    "trump_class_ship_count": 22,
+    "starfactory_cadence_weeks": 1.0,
+    "lfam_time_savings_pct": 0.45,
+    "lfam_weight_savings_pct": 0.40,
+    "navy_additive_spares_savings": 0.35,
+    "comau_weld_efficiency_gain": 0.30,
+    "elon_sphere_cost_reduction": 0.50,
+    "ford_cvn78_overrun_pct": 0.23,
+    "nuscale_power_mwe": 77
+  }
+}

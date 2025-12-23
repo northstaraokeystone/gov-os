@@ -53,7 +53,7 @@ from .das import (
     verify_availability,
     detect_erasure,
     light_client_audit,
-    ErasureEncodedData,
+    ErasureCodedData,
 )
 
 
@@ -376,7 +376,7 @@ class HolographicState:
     Per OMEGA: Boundary detection + availability guarantees.
     """
     merkle_root: str = ""
-    erasure_encoded: Optional[ErasureEncodedData] = None
+    erasure_encoded: Optional[ErasureCodedData] = None
     availability_verified: bool = False
     availability_confidence: float = 0.0
     last_sample_indices: List[int] = field(default_factory=list)

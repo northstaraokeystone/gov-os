@@ -136,7 +136,6 @@ from .meta_receipt import (
 # OMEGA v3: New modules
 from .kolmogorov import (
     calculate_kolmogorov,
-    is_kolmogorov_fraud,
     compress_transaction_history,
     detect_generator_pattern,
     emit_kolmogorov_receipt,
@@ -162,7 +161,7 @@ from .raf import (
 )
 
 from .das import (
-    ErasureEncodedData,
+    ErasureCodedData,
     encode_with_erasure,
     sample_chunks,
     verify_availability,
@@ -185,7 +184,7 @@ from .usaspending_etl import (
     fetch_federal_accounts,
     handle_pagination,
     detect_missing_fields,
-    emit_usaspending_receipt,
+    emit_etl_receipt,
 )
 
 from .layout_entropy import (
@@ -193,8 +192,7 @@ from .layout_entropy import (
     calculate_layout_entropy,
     detect_scan_artifacts,
     detect_perfect_alignment,
-    analyze_document,
-    emit_layout_entropy_receipt,
+    emit_layout_receipt,
 )
 
 from .sam_validator import (
@@ -229,25 +227,24 @@ from .bridge import (
 
 from .compress import (
     compress_receipt_with_entropy,
-    calculate_compression_ratio,
-    classify_by_compression,
+    compress_receipt_stream,
     # OMEGA v3: Kolmogorov integration
     compress_receipt_kolmogorov,
 )
 
 from .detect import (
-    detect_anomaly,
-    scan_for_patterns,
-    validate_cross_references,
+    scan,
+    autocatalytic_detect,
+    emit_detection_receipt,
     # OMEGA v3: ZKP gate
     zkp_verification_gate,
     detect_with_zkp_gate,
 )
 
 from .ledger import (
-    Ledger,
-    append_receipt,
-    compute_merkle_root,
+    LedgerState,
+    ingest,
+    get_merkle_root,
     verify_chain,
     # OMEGA v3: Bekenstein bound
     validate_bekenstein_bound,
