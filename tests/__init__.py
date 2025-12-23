@@ -1,5 +1,1 @@
-"""
-WarrantProof Test Suite
-
-⚠️ SIMULATION ONLY - NOT REAL DoD DATA - FOR RESEARCH ONLY ⚠️
-"""
+"""RAZOR Test Suite"""
