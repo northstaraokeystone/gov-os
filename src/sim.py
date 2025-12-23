@@ -1204,3 +1204,89 @@ if __name__ == "__main__":
     assert export["simulation_disclaimer"] == DISCLAIMER
 
     print(f"# PASS: simulation module self-test", file=sys.stderr)
+
+
+# === SHIPYARD SCENARIO HOOKS (v1.0) ===
+
+def run_shipyard_scenario(scenario: str) -> dict:
+    """
+    Invoke shipyard sim scenario from main sim.
+    Per spec: No changes to existing simulation logic.
+
+    Args:
+        scenario: Scenario name (e.g., "SCENARIO_BASELINE")
+
+    Returns:
+        Scenario result dict
+    """
+    try:
+        from .shipyard.sim_shipyard import run_scenario
+        return run_scenario(scenario)
+    except ImportError:
+        return {
+            "passed": False,
+            "error": "Shipyard module not available",
+            "simulation_flag": DISCLAIMER,
+        }
+
+
+def integrate_shipyard_results(shipyard_state: dict, main_state: SimState) -> SimState:
+    """
+    Merge shipyard metrics into main simulation state.
+    Per spec: Shipyard scenarios invoked via separate flag.
+
+    Args:
+        shipyard_state: Results from shipyard simulation
+        main_state: Main simulation state
+
+    Returns:
+        Updated main state with shipyard metrics
+    """
+    # Import shipyard bridge functions
+    try:
+        from .bridge import connect_shipyard, aggregate_ship_metrics
+
+        # Get shipyard receipts if available
+        shipyard_receipts = shipyard_state.get("receipt_ledger", [])
+
+        # Transform to universal format
+        universal_receipts = connect_shipyard(shipyard_receipts)
+
+        # Append to main state
+        main_state.receipts.extend(universal_receipts)
+
+        # Add shipyard metrics to scenario results
+        ships = shipyard_state.get("ships", [])
+        ship_metrics = aggregate_ship_metrics(ships)
+
+        main_state.scenario_results["shipyard"] = {
+            "ships": ship_metrics,
+            "cycles": shipyard_state.get("cycle", 0),
+            "violations": len(shipyard_state.get("violations", [])),
+            "total_savings": shipyard_state.get("total_savings_simulated", 0),
+        }
+
+    except ImportError:
+        main_state.scenario_results["shipyard"] = {
+            "error": "Bridge module not available",
+        }
+
+    return main_state
+
+
+def run_all_shipyard_scenarios() -> dict:
+    """
+    Run all 6 mandatory shipyard scenarios.
+
+    Returns:
+        Summary dict with all scenario results
+    """
+    try:
+        from .shipyard.sim_shipyard import run_all_scenarios
+        return run_all_scenarios()
+    except ImportError:
+        return {
+            "all_passed": False,
+            "error": "Shipyard module not available",
+            "simulation_flag": DISCLAIMER,
+        }

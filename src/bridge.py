@@ -1255,3 +1255,138 @@ if __name__ == "__main__":
     assert "omega_citation" in catalytic_receipt
 
     print(f"# PASS: bridge module self-test (catalytic detection validated)", file=sys.stderr)
+
+
+# === SHIPYARD CONNECTORS (v1.0) ===
+
+def connect_shipyard(shipyard_receipts: list) -> list:
+    """
+    Transform shipyard receipts to universal format.
+    Per spec: Shipyard connectors are additive only.
+
+    Args:
+        shipyard_receipts: List of receipts from shipyard module
+
+    Returns:
+        List of receipts in universal WarrantProof format
+    """
+    universal_receipts = []
+
+    for receipt in shipyard_receipts:
+        receipt_type = receipt.get("receipt_type", "unknown")
+
+        # Map shipyard receipt types to universal format
+        universal = {
+            "receipt_type": f"shipyard_{receipt_type}",
+            "ts": receipt.get("ts"),
+            "tenant_id": receipt.get("tenant_id", "warrantproof-shipyard"),
+            "payload_hash": receipt.get("payload_hash"),
+            "source_module": "shipyard",
+            "simulation_flag": DISCLAIMER,
+        }
+
+        # Copy relevant fields based on receipt type
+        if receipt_type in ["keel", "milestone", "delivery"]:
+            universal["ship_id"] = receipt.get("ship_id")
+            universal["yard_id"] = receipt.get("yard_id")
+            if receipt.get("cost_overrun_pct") is not None:
+                universal["variance_pct"] = receipt.get("cost_overrun_pct")
+
+        elif receipt_type == "block":
+            universal["block_id"] = receipt.get("block_id")
+            universal["ship_id"] = receipt.get("ship_id")
+            universal["weld_count"] = receipt.get("weld_count")
+            universal["pass_rate"] = receipt.get("pass_rate")
+
+        elif receipt_type == "additive":
+            universal["part_id"] = receipt.get("part_id")
+            universal["material_kg"] = receipt.get("material_kg")
+            universal["qa_hash"] = receipt.get("qa_hash")
+
+        elif receipt_type == "procurement":
+            universal["contract_id"] = receipt.get("contract_id")
+            universal["vendor_id"] = receipt.get("vendor_id")
+            universal["amount_usd"] = receipt.get("amount_usd")
+            universal["contract_type"] = receipt.get("contract_type")
+
+        elif receipt_type == "propulsion":
+            universal["reactor_id"] = receipt.get("reactor_id")
+            universal["ship_id"] = receipt.get("ship_id")
+            universal["power_mwe"] = receipt.get("power_mwe")
+
+        universal_receipts.append(universal)
+
+    return universal_receipts
+
+
+def translate_procurement(procurement_receipt: dict) -> dict:
+    """
+    Map procurement receipt to detect.py anomaly format.
+    Enables fraud detection on shipyard procurement.
+
+    Args:
+        procurement_receipt: Procurement receipt from shipyard
+
+    Returns:
+        Dict in detect.py anomaly format
+    """
+    anomaly_format = {
+        "receipt_type": "warrant",
+        "branch": "Navy",  # Shipyard default
+        "vendor": procurement_receipt.get("vendor_id"),
+        "amount_usd": procurement_receipt.get("amount_usd", 0),
+        "approver": "SHIPYARD_CONTRACTING",
+        "contract_id": procurement_receipt.get("contract_id"),
+        "contract_type": procurement_receipt.get("contract_type"),
+        "ts": procurement_receipt.get("ts"),
+        "decision_lineage": [],
+        "simulation_flag": DISCLAIMER,
+    }
+
+    # Add variance if present
+    if procurement_receipt.get("cumulative_variance_pct"):
+        anomaly_format["variance_pct"] = procurement_receipt.get("cumulative_variance_pct")
+
+    return anomaly_format
+
+
+def aggregate_ship_metrics(ships: list) -> dict:
+    """
+    Roll up shipyard metrics for dashboard.
+
+    Args:
+        ships: List of ship state dicts from shipyard simulation
+
+    Returns:
+        Aggregated metrics dict
+    """
+    if not ships:
+        return {
+            "ship_count": 0,
+            "completed_count": 0,
+            "avg_overrun_pct": 0.0,
+            "total_cost_usd": 0.0,
+        }
+
+    completed = [s for s in ships if s.get("current_phase") == "DELIVERY"]
+    total_baseline = sum(s.get("baseline_cost_usd", 0) for s in ships)
+    total_actual = sum(s.get("actual_cost_usd", 0) for s in ships)
+
+    overrun_pct = ((total_actual - total_baseline) / total_baseline * 100) if total_baseline > 0 else 0
+
+    # Calculate phase distribution
+    phase_counts = {}
+    for ship in ships:
+        phase = ship.get("current_phase", "UNKNOWN")
+        phase_counts[phase] = phase_counts.get(phase, 0) + 1
+
+    return {
+        "ship_count": len(ships),
+        "completed_count": len(completed),
+        "in_progress_count": len(ships) - len(completed),
+        "phase_distribution": phase_counts,
+        "total_baseline_usd": total_baseline,
+        "total_actual_usd": total_actual,
+        "avg_overrun_pct": round(overrun_pct, 2),
+        "simulation_flag": DISCLAIMER,
+    }
