@@ -9,6 +9,7 @@ Gov-OS is a universal federal fraud detection operating system that combines:
 - Domain Modules: Defense spending, Medicaid, and extensible domains
 - RAZOR: Kolmogorov validation engine for real data validation
 - Shipyard: Trump-class battleship program tracking
+- ShieldProof: Defense contract accountability
 
 Usage:
     gov-os --test                           # System test
@@ -22,6 +23,9 @@ Usage:
     gov-os medicaid scenario PROVIDER_RING  # Medicaid scenario
     gov-os razor --gate api                 # RAZOR validation gates
     gov-os shipyard --status                # Shipyard program status
+    gov-os shieldproof test                 # ShieldProof self-test
+    gov-os shieldproof contract list        # List contracts
+    gov-os shieldproof scenario run baseline # Run baseline scenario
 """
 
 import argparse
@@ -159,6 +163,68 @@ def main():
     shipyard_parser.add_argument('--simulate', action='store_true', help='Run simulation')
     shipyard_parser.add_argument('--cycles', type=int, default=100, help='Simulation cycles')
 
+    # === SHIELDPROOF COMMAND ===
+    shieldproof_parser = subparsers.add_parser('shieldproof', help='ShieldProof defense contract accountability')
+    shieldproof_sub = shieldproof_parser.add_subparsers(dest='action')
+
+    # shieldproof test
+    shieldproof_test = shieldproof_sub.add_parser('test', help='Run self-test')
+
+    # shieldproof contract
+    shieldproof_contract = shieldproof_sub.add_parser('contract', help='Contract operations')
+    shieldproof_contract_sub = shieldproof_contract.add_subparsers(dest='contract_action')
+    sp_contract_register = shieldproof_contract_sub.add_parser('register', help='Register a contract')
+    sp_contract_register.add_argument('--contractor', required=True, help='Contractor name')
+    sp_contract_register.add_argument('--amount', type=float, required=True, help='Total amount')
+    sp_contract_register.add_argument('--milestones', required=True, help='Milestones as JSON array')
+    sp_contract_register.add_argument('--terms', help='Contract terms as JSON')
+    sp_contract_register.add_argument('--id', help='Contract ID (auto-generated if not provided)')
+    sp_contract_list = shieldproof_contract_sub.add_parser('list', help='List contracts')
+
+    # shieldproof milestone
+    shieldproof_milestone = shieldproof_sub.add_parser('milestone', help='Milestone operations')
+    shieldproof_milestone_sub = shieldproof_milestone.add_subparsers(dest='milestone_action')
+    sp_milestone_add = shieldproof_milestone_sub.add_parser('add', help='Submit a deliverable')
+    sp_milestone_add.add_argument('--contract-id', required=True, help='Contract ID')
+    sp_milestone_add.add_argument('--milestone-id', required=True, help='Milestone ID')
+    sp_milestone_add.add_argument('--deliverable', help='Deliverable content/hash')
+    sp_milestone_verify = shieldproof_milestone_sub.add_parser('verify', help='Verify a milestone')
+    sp_milestone_verify.add_argument('--contract-id', required=True, help='Contract ID')
+    sp_milestone_verify.add_argument('--milestone-id', required=True, help='Milestone ID')
+    sp_milestone_verify.add_argument('--verifier-id', default='CLI-VERIFIER', help='Verifier ID')
+    sp_milestone_verify.add_argument('--reject', action='store_true', help='Reject instead of approve')
+
+    # shieldproof payment
+    shieldproof_payment = shieldproof_sub.add_parser('payment', help='Payment operations')
+    shieldproof_payment_sub = shieldproof_payment.add_subparsers(dest='payment_action')
+    sp_payment_release = shieldproof_payment_sub.add_parser('release', help='Release payment')
+    sp_payment_release.add_argument('--contract-id', required=True, help='Contract ID')
+    sp_payment_release.add_argument('--milestone-id', required=True, help='Milestone ID')
+    sp_payment_list = shieldproof_payment_sub.add_parser('list', help='List payments')
+    sp_payment_list.add_argument('--contract-id', help='Filter by contract ID')
+
+    # shieldproof reconcile
+    shieldproof_reconcile = shieldproof_sub.add_parser('reconcile', help='Reconciliation operations')
+    shieldproof_reconcile_sub = shieldproof_reconcile.add_subparsers(dest='reconcile_action')
+    sp_reconcile_check = shieldproof_reconcile_sub.add_parser('check', help='Check variance')
+    sp_reconcile_check.add_argument('--contract-id', required=True, help='Contract ID')
+    sp_reconcile_report = shieldproof_reconcile_sub.add_parser('report', help='Full variance report')
+
+    # shieldproof dashboard
+    shieldproof_dashboard = shieldproof_sub.add_parser('dashboard', help='Dashboard operations')
+    shieldproof_dashboard_sub = shieldproof_dashboard.add_subparsers(dest='dashboard_action')
+    sp_dashboard_export = shieldproof_dashboard_sub.add_parser('export', help='Export dashboard')
+    sp_dashboard_export.add_argument('--format', choices=['json', 'csv', 'html'], default='json')
+    sp_dashboard_export.add_argument('--output', help='Output path')
+    sp_dashboard_summary = shieldproof_dashboard_sub.add_parser('summary', help='Show summary')
+
+    # shieldproof scenario
+    shieldproof_scenario = shieldproof_sub.add_parser('scenario', help='Run scenarios')
+    shieldproof_scenario_sub = shieldproof_scenario.add_subparsers(dest='scenario_action')
+    sp_scenario_run = shieldproof_scenario_sub.add_parser('run', help='Run a scenario')
+    sp_scenario_run.add_argument('scenario', choices=['baseline', 'stress'], help='Scenario name')
+    sp_scenario_run.add_argument('--n-contracts', type=int, default=10, help='Number of contracts')
+
     # === VALIDATE COMMAND ===
     validate_parser = subparsers.add_parser('validate', help='Validate domain configuration')
     validate_parser.add_argument('--domain', '-d', type=str, default='all',
@@ -208,6 +274,9 @@ def main():
 
     if args.command == 'shipyard':
         return cmd_shipyard(args)
+
+    if args.command == 'shieldproof':
+        return cmd_shieldproof(args)
 
     if args.command == 'validate':
         return cmd_validate(args.domain)
@@ -783,6 +852,215 @@ def cmd_shipyard(args):
 
     print("Use --status or --simulate", file=sys.stderr)
     return 0
+
+
+def cmd_shieldproof(args):
+    """ShieldProof defense contract accountability commands."""
+    from src.shieldproof import (
+        dual_hash as sp_dual_hash,
+        emit_receipt as sp_emit_receipt,
+        VERSION as SP_VERSION,
+        TENANT_ID as SP_TENANT_ID,
+        register_contract,
+        list_contracts,
+        get_contract,
+        submit_deliverable,
+        verify_milestone,
+        release_payment,
+        list_payments,
+        total_paid,
+        check_variance,
+        reconcile_all,
+        get_waste_summary,
+        generate_summary,
+        export_dashboard,
+        run_baseline_scenario,
+        run_stress_scenario,
+        clear_ledger,
+    )
+
+    print("=" * 60, file=sys.stderr)
+    print(f"SHIELDPROOF v{SP_VERSION} - Defense Contract Accountability", file=sys.stderr)
+    print('"One receipt. One milestone. One truth."', file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+
+    if not args.action:
+        print("Available actions: test, contract, milestone, payment, reconcile, dashboard, scenario", file=sys.stderr)
+        return 0
+
+    # Test
+    if args.action == 'test':
+        h = sp_dual_hash("test")
+        assert ":" in h, "dual_hash must return SHA256:BLAKE3 format"
+        print(f"dual_hash: OK ({h[:32]}...)", file=sys.stderr)
+        r = sp_emit_receipt("test", {"message": "ShieldProof self-test"}, to_ledger=False)
+        print(f"emit_receipt: OK", file=sys.stderr)
+        print(f"\n[PASS] ShieldProof v{SP_VERSION} operational", file=sys.stderr)
+        return 0
+
+    # Contract
+    if args.action == 'contract':
+        if not hasattr(args, 'contract_action') or not args.contract_action:
+            print("Usage: gov-os shieldproof contract {register,list}", file=sys.stderr)
+            return 1
+
+        if args.contract_action == 'register':
+            try:
+                milestones = json.loads(args.milestones)
+            except json.JSONDecodeError as e:
+                print(f"Error: Invalid milestones JSON: {e}", file=sys.stderr)
+                return 1
+            terms = {}
+            if args.terms:
+                try:
+                    terms = json.loads(args.terms)
+                except json.JSONDecodeError:
+                    terms = {"raw": args.terms}
+            try:
+                receipt = register_contract(
+                    contractor=args.contractor,
+                    amount=args.amount,
+                    milestones=milestones,
+                    terms=terms,
+                    contract_id=getattr(args, 'id', None),
+                )
+                print(f"Contract registered: {receipt['contract_id']}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
+            return 0
+
+        if args.contract_action == 'list':
+            contracts = list_contracts()
+            if not contracts:
+                print("No contracts found.", file=sys.stderr)
+            for c in contracts:
+                amount = c.get('amount_fixed', c.get('total_value_usd', 0))
+                print(f"{c.get('contract_id')}: {c.get('contractor')} - ${amount:,.2f}")
+            return 0
+
+    # Milestone
+    if args.action == 'milestone':
+        if not hasattr(args, 'milestone_action') or not args.milestone_action:
+            print("Usage: gov-os shieldproof milestone {add,verify}", file=sys.stderr)
+            return 1
+
+        if args.milestone_action == 'add':
+            contract_id = getattr(args, 'contract_id', None)
+            milestone_id = getattr(args, 'milestone_id', None)
+            deliverable = getattr(args, 'deliverable', 'Deliverable') or 'Deliverable'
+            try:
+                receipt = submit_deliverable(contract_id, milestone_id, deliverable.encode())
+                print(f"Deliverable submitted: {receipt['milestone_id']} -> {receipt['status']}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
+            return 0
+
+        if args.milestone_action == 'verify':
+            contract_id = getattr(args, 'contract_id', None)
+            milestone_id = getattr(args, 'milestone_id', None)
+            verifier_id = getattr(args, 'verifier_id', 'CLI-VERIFIER')
+            reject = getattr(args, 'reject', False)
+            try:
+                receipt = verify_milestone(contract_id, milestone_id, verifier_id, passed=not reject)
+                print(f"Milestone {receipt['milestone_id']} -> {receipt['status']}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
+            return 0
+
+    # Payment
+    if args.action == 'payment':
+        if not hasattr(args, 'payment_action') or not args.payment_action:
+            print("Usage: gov-os shieldproof payment {release,list}", file=sys.stderr)
+            return 1
+
+        if args.payment_action == 'release':
+            contract_id = getattr(args, 'contract_id', None)
+            milestone_id = getattr(args, 'milestone_id', None)
+            try:
+                receipt = release_payment(contract_id, milestone_id)
+                amount = receipt.get('amount', receipt.get('amount_usd', 0))
+                print(f"Payment released: ${amount:,.2f}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
+            return 0
+
+        if args.payment_action == 'list':
+            contract_id = getattr(args, 'contract_id', None)
+            payments = list_payments(contract_id)
+            if not payments:
+                print("No payments found.", file=sys.stderr)
+            for p in payments:
+                amount = p.get('amount', p.get('amount_usd', 0))
+                print(f"{p.get('contract_id')}/{p.get('milestone_id')}: ${amount:,.2f}")
+            return 0
+
+    # Reconcile
+    if args.action == 'reconcile':
+        if not hasattr(args, 'reconcile_action') or not args.reconcile_action:
+            print("Usage: gov-os shieldproof reconcile {check,report}", file=sys.stderr)
+            return 1
+
+        if args.reconcile_action == 'check':
+            contract_id = getattr(args, 'contract_id', None)
+            result = check_variance(contract_id)
+            print(json.dumps(result, indent=2))
+            return 0
+
+        if args.reconcile_action == 'report':
+            reports = reconcile_all()
+            summary = get_waste_summary()
+            output = {"summary": summary, "contracts": reports}
+            print(json.dumps(output, indent=2))
+            return 0
+
+    # Dashboard
+    if args.action == 'dashboard':
+        if not hasattr(args, 'dashboard_action') or not args.dashboard_action:
+            print("Usage: gov-os shieldproof dashboard {export,summary}", file=sys.stderr)
+            return 1
+
+        if args.dashboard_action == 'export':
+            fmt = getattr(args, 'format', 'json')
+            output = getattr(args, 'output', f'/tmp/dashboard.{fmt}')
+            try:
+                export_dashboard(fmt, output)
+                print(f"Exported to {output}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
+            return 0
+
+        if args.dashboard_action == 'summary':
+            summary = generate_summary()
+            print(json.dumps(summary, indent=2, default=str))
+            return 0
+
+    # Scenario
+    if args.action == 'scenario':
+        if not hasattr(args, 'scenario_action') or args.scenario_action != 'run':
+            print("Usage: gov-os shieldproof scenario run {baseline,stress}", file=sys.stderr)
+            return 1
+
+        scenario = getattr(args, 'scenario', 'baseline')
+        n_contracts = getattr(args, 'n_contracts', 10)
+
+        if scenario == 'baseline':
+            result = run_baseline_scenario(n_contracts=n_contracts)
+        elif scenario == 'stress':
+            result = run_stress_scenario(n_contracts=n_contracts)
+        else:
+            print(f"Unknown scenario: {scenario}", file=sys.stderr)
+            return 1
+
+        print(json.dumps(result, indent=2, default=str))
+        return 0 if result.get('passed') else 1
+
+    print(f"Unknown action: {args.action}", file=sys.stderr)
+    return 1
 
 
 def cmd_validate(domain: str):

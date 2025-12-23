@@ -355,8 +355,7 @@ gov-os/
 ├── scripts/                            # Execution scripts
 │   └── ...                             # (ShieldProof gates consolidated to gate.sh)
 │
-├── shieldproof_cli.py                  # ShieldProof standalone CLI
-└── shieldproof_receipts.jsonl          # ShieldProof ledger file
+└── shieldproof_receipts.jsonl          # ShieldProof ledger file (auto-generated)
 ```
 
 ---
