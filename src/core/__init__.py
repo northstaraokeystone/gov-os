@@ -80,6 +80,14 @@ from .constants import (
     HOLOGRAPHIC_LOCALIZATION_COMPLEXITY,
     validate_branch,
     get_citation,
+    # v6.1 dynamic thresholds
+    COMPRESSION_THRESHOLD_DEFAULT,
+    KOLMOGOROV_THRESHOLD_DEFAULT,
+    load_threshold,
+    get_compression_threshold,
+    get_kolmogorov_threshold,
+    clear_threshold_cache,
+    get_all_thresholds,
 )
 
 from .utils import (
@@ -146,6 +154,12 @@ from .raf import (
     detect_cycles,
     emit_raf_receipt,
     detect_without_hardcode,
+)
+
+from .data_gate import (
+    RealDataGate,
+    get_available_cohorts,
+    get_cohort_info,
 )
 
 __all__ = [
@@ -247,4 +261,16 @@ __all__ = [
     "detect_cycles",
     "emit_raf_receipt",
     "detect_without_hardcode",
+    # v6.1 Dynamic Thresholds
+    "COMPRESSION_THRESHOLD_DEFAULT",
+    "KOLMOGOROV_THRESHOLD_DEFAULT",
+    "load_threshold",
+    "get_compression_threshold",
+    "get_kolmogorov_threshold",
+    "clear_threshold_cache",
+    "get_all_thresholds",
+    # v6.1 Data Gate
+    "RealDataGate",
+    "get_available_cohorts",
+    "get_cohort_info",
 ]

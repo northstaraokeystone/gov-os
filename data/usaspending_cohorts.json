@@ -1,0 +1,85 @@
+{
+  "cohorts": {
+    "doge_medicaid": {
+      "agency": "HHS",
+      "agency_full": "Department of Health and Human Services",
+      "award_type": "grant",
+      "date_range": {
+        "start": "2023-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 500,
+      "description": "Medicaid improper payments - $100B annual fraud claimed by DOGE",
+      "source": "GAO-24-106541",
+      "filters": {}
+    },
+    "dod_transdigm": {
+      "agency": "DOD",
+      "agency_full": "Department of Defense",
+      "award_type": "contract",
+      "date_range": {
+        "start": "2020-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 200,
+      "description": "DoD sole-source contracts - TransDigm pattern fraud",
+      "source": "DoD IG Report 2024",
+      "filters": {
+        "sole_source": true,
+        "extent_competed": "NOT_COMPETED"
+      }
+    },
+    "fat_leonard": {
+      "agency": "DOD",
+      "agency_full": "Department of Defense",
+      "sub_agency": "Navy",
+      "award_type": "contract",
+      "date_range": {
+        "start": "2010-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 100,
+      "description": "Navy husbanding contracts - Fat Leonard fraud pattern",
+      "source": "DOJ Fat Leonard prosecution records",
+      "filters": {
+        "foreign_vendor": true,
+        "naics_code": "488310"
+      }
+    },
+    "federal_real_estate": {
+      "agency": "GSA",
+      "agency_full": "General Services Administration",
+      "award_type": "lease",
+      "date_range": {
+        "start": "2022-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 300,
+      "description": "Federal real estate leases - 12% occupancy waste pattern",
+      "source": "GSA Federal Real Property Profile 2024",
+      "filters": {}
+    },
+    "dod_shipbuilding": {
+      "agency": "DOD",
+      "agency_full": "Department of Defense",
+      "sub_agency": "Navy",
+      "award_type": "contract",
+      "date_range": {
+        "start": "2015-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 50,
+      "description": "Navy shipbuilding contracts - cost overrun detection",
+      "source": "GAO-20-257, GAO-16-395",
+      "filters": {
+        "naics_code": "336611"
+      }
+    }
+  },
+  "metadata": {
+    "version": "6.1.0",
+    "last_updated": "2024-12-24",
+    "api_base": "https://api.usaspending.gov/api/v2/",
+    "simulation_disclaimer": "SIMULATION FOR RESEARCH PURPOSES ONLY"
+  }
+}

@@ -1,0 +1,86 @@
+# Gov-OS v6.1 Module Defaults
+# Module-level default configurations including ZK_ENABLED flags
+#
+# ZK POLICY: Only modules handling PII require ZK proving
+# Default OFF for public data - reduces computational cost and adoption friction
+
+modules:
+  doge:
+    zk_enabled: false  # Public spending data, no PII
+    priority: "P0"
+    data_sources:
+      - "usaspending"
+      - "doge_claims"
+
+  spend:
+    zk_enabled: false  # Public spending data, no PII
+    priority: "P0"
+    data_sources:
+      - "usaspending"
+      - "treasury"
+
+  claim:
+    zk_enabled: true  # Required: Contains claimant PII
+    priority: "P1"
+    data_sources:
+      - "agency_claims"
+
+  benefit:
+    zk_enabled: true  # Required: Contains beneficiary PII
+    priority: "P0"
+    data_sources:
+      - "medicaid"
+      - "cms"
+
+  green:
+    zk_enabled: false  # Environmental data, no PII
+    priority: "P0"
+    data_sources:
+      - "epa"
+      - "emissions_reports"
+
+  vote:
+    zk_enabled: false  # Anonymized by design
+    priority: "P1"
+    data_sources:
+      - "election_data"
+
+  safety:
+    zk_enabled: false  # Aggregate safety data
+    priority: "P1"
+    data_sources:
+      - "fda"
+      - "adverse_events"
+
+  coin:
+    zk_enabled: false  # Public transaction data
+    priority: "P1"
+    data_sources:
+      - "blockchain"
+
+  origin:
+    zk_enabled: false  # Supply chain metadata
+    priority: "P1"
+    data_sources:
+      - "customs"
+      - "supply_chain"
+
+  graft:
+    zk_enabled: false  # Public corruption data
+    priority: "P1"
+    data_sources:
+      - "fbi"
+      - "doj"
+
+  warrant:
+    zk_enabled: false  # Public warrant data
+    priority: "P1"
+    data_sources:
+      - "usaspending"
+      - "dod"
+
+  lab:
+    zk_enabled: false  # Research data
+    priority: "P2"
+    data_sources:
+      - "research_repos"
