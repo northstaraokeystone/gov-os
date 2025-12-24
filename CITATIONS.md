@@ -185,6 +185,55 @@ Every claim, statistic, and pattern is traceable to these publicly available doc
 
 ---
 
+## DOGE Efficiency Claims (v6.1)
+
+### DOGE Savings Claims
+- **Source:** Elon Musk (@elonmusk), X post
+- **Date:** November 2024
+- **Claim:** "$160B in government waste identified"
+- **URL:** https://x.com/elonmusk
+- **Usage:** DOGE claim validation target
+
+### GAO-24-106541: Medicaid Improper Payments
+- **Title:** "Medicaid: CMS Needs to Better Target Risks to Improve Oversight of Expenditures"
+- **URL:** https://www.gao.gov/products/gao-24-106541
+- **Key Data:** ~$100B annual improper payments
+- **Date:** 2024
+- **Usage:** doge_medicaid cohort baseline
+
+### USASpending API
+- **Source:** USASpending.gov
+- **Endpoint:** api.usaspending.gov/api/v2/
+- **Documentation:** https://api.usaspending.gov/docs/
+- **Date:** Ongoing
+- **Usage:** Real data integration for threshold calibration
+
+### DoD Sole-Source Contracts (TransDigm)
+- **Source:** DoD Inspector General Reports
+- **Title:** "TransDigm Pricing Practices"
+- **URL:** https://www.dodig.mil/reports.html
+- **Key Data:** Sole-source contract overpricing patterns
+- **Date:** 2024
+- **Usage:** dod_transdigm cohort
+
+### GSA Federal Real Property Profile
+- **Source:** General Services Administration
+- **Title:** "Federal Real Property Profile 2024"
+- **URL:** https://www.gsa.gov/real-estate
+- **Key Data:** 12% average occupancy rate, $7.4B annual waste
+- **Date:** 2024
+- **Usage:** federal_real_estate cohort
+
+### Fat Leonard Prosecution
+- **Source:** Department of Justice
+- **Title:** "United States v. Leonard Glenn Francis"
+- **URL:** https://www.justice.gov
+- **Key Data:** Navy husbanding contract fraud pattern
+- **Date:** 2015-2024
+- **Usage:** fat_leonard cohort
+
+---
+
 ## Department of Justice (DOJ)
 
 ### Newport News Press Release

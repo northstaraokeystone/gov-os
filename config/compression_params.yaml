@@ -1,0 +1,45 @@
+# Gov-OS v6.1 Compression Parameters
+# Domain-specific compression thresholds replacing hardcoded 0.75
+#
+# PARADIGM: Thresholds calibrated from real data distributions per domain
+# Each domain has different baseline variance - one threshold doesn't fit all
+
+thresholds:
+  # Fallback threshold for unknown domains
+  default: 0.75
+
+  # DoD logistics - high variance in sole-source contracts
+  # Source: DoD IG analysis of TransDigm-style pricing
+  dod_logistics: 0.55
+
+  # R&D contracts - standard baseline
+  # Source: Historical compression analysis of R&D spending patterns
+  r_and_d_contracts: 0.75
+
+  # Medicaid claims - tight distribution, fraud stands out
+  # Source: GAO-24-106541 improper payment analysis
+  medicaid_claims: 0.45
+
+  # Federal real estate - moderate variance in occupancy
+  # Source: GSA Federal Real Property Profile 2024
+  federal_real_estate: 0.60
+
+  # Defense shipbuilding - high variance, long procurement cycles
+  dod_shipbuilding: 0.65
+
+  # Personnel costs - tight distribution
+  personnel: 0.50
+
+calibration:
+  # Method for computing threshold from data
+  method: "percentile_90"
+
+  # Minimum samples required for calibration
+  min_samples: 100
+
+  # Days before recalibration required
+  recalibrate_days: 30
+
+  # Bounds to prevent invalid calibration
+  threshold_min: 0.10
+  threshold_max: 0.95

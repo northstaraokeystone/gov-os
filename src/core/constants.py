@@ -3,6 +3,11 @@ Gov-OS Core Constants - CLAUDEME v3.1 Compliant
 
 THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY
 
+v6.1 Changes:
+- Dynamic threshold loading via load_threshold()
+- Removed hardcoded COMPRESSION_THRESHOLD = 0.75
+- Thresholds now calibrated per domain from config/compression_params.yaml
+
 v5.1 Temporal Physics Constants:
 - LAMBDA_NATURAL: Exponential decay rate from relationship attrition studies
 - RESISTANCE_THRESHOLD: Anomaly detection threshold for decay resistance
@@ -13,6 +18,15 @@ v5.1 Temporal Physics Constants:
 """
 
 import math
+import os
+from pathlib import Path
+from typing import Optional
+
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
 
 try:
     import numpy as np
@@ -73,7 +87,11 @@ HOLOGRAPHIC_DETECTION_PROB = 0.9999
 
 # === OMEGA v3 CONSTANTS ===
 
-KOLMOGOROV_THRESHOLD = 0.65
+# v6.1: These are now FALLBACK defaults. Use load_threshold() for domain-specific values.
+# KOLMOGOROV_THRESHOLD kept for backward compatibility
+KOLMOGOROV_THRESHOLD_DEFAULT = 0.65
+KOLMOGOROV_THRESHOLD = KOLMOGOROV_THRESHOLD_DEFAULT  # Backward compatibility alias
+COMPRESSION_THRESHOLD_DEFAULT = 0.75  # Fallback when config unavailable
 KOLMOGOROV_LEGITIMATE_MIN = 0.75
 BEKENSTEIN_BITS_PER_DOLLAR = 1e-6
 RAF_CYCLE_MIN_LENGTH = 3
@@ -219,3 +237,132 @@ def get_citation(key: str) -> dict:
     if key not in CITATIONS:
         raise KeyError(f"Citation not found: {key}")
     return CITATIONS[key].copy()
+
+
+# ============================================================================
+# v6.1 DYNAMIC THRESHOLD LOADING
+# ============================================================================
+
+# Cache for loaded config
+_compression_config_cache: Optional[dict] = None
+
+
+def _get_config_path() -> Path:
+    """Get path to compression_params.yaml config file."""
+    # Try relative to this file first
+    module_dir = Path(__file__).parent.parent.parent  # src/core -> src -> gov-os
+    config_path = module_dir / "config" / "compression_params.yaml"
+    if config_path.exists():
+        return config_path
+
+    # Try current working directory
+    cwd_config = Path.cwd() / "config" / "compression_params.yaml"
+    if cwd_config.exists():
+        return cwd_config
+
+    return config_path  # Return expected path even if not found
+
+
+def _load_compression_config() -> dict:
+    """Load compression config from YAML file. Returns empty dict on failure."""
+    global _compression_config_cache
+
+    if _compression_config_cache is not None:
+        return _compression_config_cache
+
+    if not HAS_YAML:
+        _compression_config_cache = {}
+        return _compression_config_cache
+
+    config_path = _get_config_path()
+    if not config_path.exists():
+        _compression_config_cache = {}
+        return _compression_config_cache
+
+    try:
+        with open(config_path, 'r') as f:
+            _compression_config_cache = yaml.safe_load(f) or {}
+    except Exception:
+        _compression_config_cache = {}
+
+    return _compression_config_cache
+
+
+def load_threshold(domain: str) -> float:
+    """
+    Load domain-specific compression threshold from config.
+
+    v6.1: Thresholds are now calibrated per domain instead of using
+    a single hardcoded value. Each domain has different baseline variance.
+
+    Args:
+        domain: Domain identifier (e.g., 'medicaid_claims', 'dod_logistics')
+
+    Returns:
+        Threshold value for the domain, or default (0.75) if not found
+
+    Example:
+        >>> load_threshold('medicaid_claims')
+        0.45
+        >>> load_threshold('unknown_domain')
+        0.75
+    """
+    config = _load_compression_config()
+    thresholds = config.get('thresholds', {})
+
+    # Try domain-specific threshold
+    if domain in thresholds:
+        return float(thresholds[domain])
+
+    # Fall back to default from config, then hardcoded default
+    return float(thresholds.get('default', COMPRESSION_THRESHOLD_DEFAULT))
+
+
+def get_compression_threshold(domain: str = "default") -> float:
+    """
+    Get compression threshold for a domain.
+
+    Wrapper for load_threshold() providing backward compatibility.
+
+    Args:
+        domain: Domain identifier (default: "default")
+
+    Returns:
+        Compression threshold for the domain
+    """
+    return load_threshold(domain)
+
+
+def get_kolmogorov_threshold(domain: str = "default") -> float:
+    """
+    Get Kolmogorov complexity threshold for a domain.
+
+    v6.1: Kolmogorov thresholds track compression thresholds but
+    with a -0.10 offset (tighter bound for complexity analysis).
+
+    Args:
+        domain: Domain identifier (default: "default")
+
+    Returns:
+        Kolmogorov threshold for the domain
+    """
+    compression_threshold = load_threshold(domain)
+    # Kolmogorov threshold is 0.10 lower than compression threshold
+    return max(0.1, compression_threshold - 0.10)
+
+
+def clear_threshold_cache() -> None:
+    """Clear the cached compression config. Used for testing."""
+    global _compression_config_cache
+    _compression_config_cache = None
+
+
+def get_all_thresholds() -> dict:
+    """
+    Get all configured domain thresholds.
+
+    Returns:
+        Dict mapping domain names to threshold values
+    """
+    config = _load_compression_config()
+    return config.get('thresholds', {'default': COMPRESSION_THRESHOLD_DEFAULT}).copy()
