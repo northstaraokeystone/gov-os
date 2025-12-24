@@ -1,15 +1,20 @@
 """
-Gov-OS AidProof Module Configuration - v6.2
+Gov-OS AidProof Module Configuration - v6.3
 
 THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY
 
-AidProof: Foreign aid accountability module for USAID, State, MCC
+AidProof: Foreign aid accountability module for USAID, State, MCC, UN agencies
 Priority: P1 (Important)
 
 Political Hook:
 Tests Musk's claim that "most USAID funding went to far left
 political causes... including money coming back to fund the left
 in America."
+
+v6.3 Changes:
+- Added UN agencies to AGENCIES list
+- Added UN_PATHWAY_ENABLED, UN_VOLUNTARY_AGENCIES, UN_ROUND_TRIP_PATHWAY
+- Added un_round_trip_receipt to RECEIPT_TYPES
 """
 
 # === MODULE IDENTITY ===
@@ -28,6 +33,7 @@ RECEIPT_TYPES = [
     "partner_ingest_receipt",
     "aid_verification_receipt",
     "round_trip_receipt",
+    "un_round_trip_receipt",  # v6.3: UN pathway round-trip
     "overhead_receipt",
     "country_allocation_receipt",
     "aid_anomaly_receipt",
@@ -46,13 +52,38 @@ DATA_SOURCES = {
 # === SUPPORTED AGENCIES ===
 
 AGENCIES = [
+    # Bilateral (v6.2)
     "USAID",
     "STATE",
     "MCC",
     "PEACE_CORPS",
     "TDA",
     "USTDA",
+    # UN Agencies (v6.3 NEW)
+    "UN_REGULAR",
+    "UN_PEACEKEEPING",
+    "UNICEF",
+    "UNDP",
+    "WFP",
+    "UNHCR",
+    "WHO",
+    "UNFPA",
+    "UNRWA",
 ]
+
+# === v6.3 UN PATHWAY CONFIGURATION ===
+
+UN_PATHWAY_ENABLED = True  # Enable UN→NGO round-trip detection
+UN_VOLUNTARY_AGENCIES = [
+    "UNICEF",
+    "UNDP",
+    "WFP",
+    "UNHCR",
+    "WHO",
+    "UNFPA",
+    "UNRWA",
+]
+UN_ROUND_TRIP_PATHWAY = "US_GOV → UN_AGENCY → US_NGO → FEC"  # Documentation of pathway
 
 # === THRESHOLDS ===
 

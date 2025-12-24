@@ -12,6 +12,11 @@ v6.2 Changes:
 - Integrates with ForeignAidETL for implementing partner analysis
 - FEC cross-reference for round-trip funding detection
 
+v6.3 Changes:
+- Added detect_musk_ecosystem_coi() for Musk company COI detection
+- Cross-references DOGE recommendations vs Musk company contracts
+- Emits musk_ecosystem_coi_receipt
+
 The Political Hook: "Receipts for DOGE"
 Cryptographic validation of Musk/Ramaswamy $160B savings claims
 using actual federal spending data.
@@ -19,6 +24,9 @@ using actual federal spending data.
 v6.2: Tests Musk claim that "most USAID funding went to far left
 political causes... including money coming back to fund the left
 in America."
+
+v6.3: Detects COI pattern where DOGE leader recommends cuts →
+affiliated company wins contracts.
 """
 
 import json
@@ -30,6 +38,11 @@ from .config import (
     DOGE_FRAUD_TARGETS,
     DOGE_DATA_COHORTS,
     DISCLAIMER,
+    # v6.3 COI detection
+    MUSK_ECOSYSTEM_ENTITIES,
+    COI_DETECTION_ENABLED,
+    COI_CORRELATION_WINDOW_DAYS,
+    COI_MIN_CONTRACT_VALUE,
 )
 
 # Import core utilities
@@ -421,6 +434,247 @@ def _emit_usaid_validation_receipt(result: dict) -> dict:
         "tenant_id": TENANT_ID,
         "module": MODULE_ID,
         **payload,
+        "payload_hash": dual_hash(json.dumps(payload, sort_keys=True)),
+        "simulation_flag": DISCLAIMER,
+    }, to_stdout=False)
+
+
+# === v6.3 MUSK ECOSYSTEM COI DETECTION ===
+
+
+def detect_musk_ecosystem_coi(lookback_days: int = 365) -> dict:
+    """
+    v6.3: Cross-reference DOGE efficiency recommendations against
+    contract awards to Musk-affiliated entities.
+
+    COI pattern: Entity that BENEFITS from cuts → Entity that WINS contracts
+
+    Algorithm:
+    1. Load MUSK_ECOSYSTEM_ENTITIES from config
+    2. Query USASpending for contracts awarded to each entity in lookback period
+    3. Query DOGE recommendations affecting competitor agencies/programs
+    4. Calculate temporal correlation:
+       - For each Musk contract, check if DOGE recommended cuts to:
+         a) Same agency within COI_CORRELATION_WINDOW_DAYS before award
+         b) Competing programs/contractors
+    5. Score: coi_score = (correlated_contracts / total_contracts) × avg_contract_value_ratio
+    6. Emit musk_ecosystem_coi_receipt
+
+    Args:
+        lookback_days: How far back to search contracts (default 365)
+
+    Returns:
+        dict with:
+        - entities_analyzed: int
+        - total_contracts_found: int
+        - total_contract_value_usd: float
+        - doge_recommendations_analyzed: int
+        - correlated_events: list[dict]
+        - coi_score: float (0-1, higher = more correlation)
+        - verdict: "coi_detected" | "no_coi_detected" | "insufficient_data"
+        - receipt: dict
+
+    Example:
+        >>> result = detect_musk_ecosystem_coi(lookback_days=365)
+        >>> print(f"COI Score: {result['coi_score']:.2f}")
+        >>> print(f"Verdict: {result['verdict']}")
+
+    Note:
+        Does NOT determine guilt—only flags temporal correlation.
+        Requires contract data to be in USASpending (may lag announcements).
+        xAI GenAIMil contract may not appear in FPDS yet.
+    """
+    if not COI_DETECTION_ENABLED:
+        return {
+            "error": "COI detection disabled in config",
+            "verdict": "insufficient_data",
+            "simulation_flag": DISCLAIMER,
+        }
+
+    # Initialize results
+    entities_analyzed = 0
+    total_contracts_found = 0
+    total_contract_value_usd = 0.0
+    doge_recommendations_analyzed = 0
+    correlated_events = []
+
+    try:
+        # Simulate Musk ecosystem contract data
+        # In production, would query USASpending API
+        contracts = _simulate_musk_contracts(lookback_days)
+        doge_recs = _simulate_doge_recommendations()
+
+        entities_analyzed = len(MUSK_ECOSYSTEM_ENTITIES)
+        total_contracts_found = len(contracts)
+        total_contract_value_usd = sum(c.get("value", 0) for c in contracts)
+        doge_recommendations_analyzed = len(doge_recs)
+
+        # Check for temporal correlation
+        for contract in contracts:
+            # Find DOGE recommendations within window before contract award
+            for rec in doge_recs:
+                days_between = _calculate_days_between(
+                    rec.get("date", ""),
+                    contract.get("award_date", "")
+                )
+                if 0 <= days_between <= COI_CORRELATION_WINDOW_DAYS:
+                    # Check if recommendation affects competitor
+                    if _affects_competitor(rec, contract):
+                        correlated_events.append({
+                            "entity": contract.get("entity"),
+                            "contract_id": contract.get("contract_id"),
+                            "contract_value": contract.get("value"),
+                            "award_date": contract.get("award_date"),
+                            "doge_recommendation": rec.get("description"),
+                            "recommendation_date": rec.get("date"),
+                            "days_between": days_between,
+                            "affected_competitor": rec.get("entity_affected"),
+                        })
+
+        # Calculate COI score
+        if total_contracts_found > 0:
+            correlation_ratio = len(correlated_events) / total_contracts_found
+            avg_value_ratio = total_contract_value_usd / (total_contracts_found * COI_MIN_CONTRACT_VALUE)
+            coi_score = min(1.0, correlation_ratio * (1 + min(1.0, avg_value_ratio / 100)))
+        else:
+            coi_score = 0.0
+
+        # Determine verdict
+        if total_contracts_found == 0:
+            verdict = "insufficient_data"
+        elif coi_score >= 0.3:
+            verdict = "coi_detected"
+        else:
+            verdict = "no_coi_detected"
+
+    except Exception as e:
+        return {
+            "error": str(e),
+            "verdict": "insufficient_data",
+            "simulation_flag": DISCLAIMER,
+        }
+
+    # Build result
+    result = {
+        "entities_analyzed": entities_analyzed,
+        "total_contracts_found": total_contracts_found,
+        "total_contract_value_usd": total_contract_value_usd,
+        "doge_recommendations_analyzed": doge_recommendations_analyzed,
+        "correlated_events": correlated_events,
+        "coi_score": round(coi_score, 4),
+        "verdict": verdict,
+        "lookback_days": lookback_days,
+        "correlation_window_days": COI_CORRELATION_WINDOW_DAYS,
+    }
+
+    # Emit receipt
+    receipt = _emit_musk_coi_receipt(result)
+    result["receipt"] = receipt
+    result["simulation_flag"] = DISCLAIMER
+
+    return result
+
+
+def _simulate_musk_contracts(lookback_days: int) -> List[dict]:
+    """Simulate Musk ecosystem contracts for testing."""
+    import random
+    random.seed(42)  # Deterministic for testing
+
+    contracts = []
+    entities = ["spacex", "starlink", "tesla", "xai"]
+
+    for entity in entities:
+        num_contracts = random.randint(1, 5)
+        for i in range(num_contracts):
+            contracts.append({
+                "entity": entity,
+                "contract_id": f"{entity.upper()}-{i+1:04d}",
+                "award_date": f"2024-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}",
+                "value": random.randint(1_000_000, 500_000_000),
+                "agency": random.choice(["DOD", "NASA", "USAID", "GSA"]),
+            })
+
+    return contracts
+
+
+def _simulate_doge_recommendations() -> List[dict]:
+    """Simulate DOGE recommendations for testing."""
+    return [
+        {
+            "date": "2024-11-15",
+            "description": "Recommended cuts to legacy launch providers",
+            "entity_affected": "ULA",
+            "category": "dod_contracts",
+        },
+        {
+            "date": "2024-11-20",
+            "description": "Recommended reduction in NASA SLS program",
+            "entity_affected": "Boeing_SLS",
+            "category": "nasa_programs",
+        },
+        {
+            "date": "2024-12-01",
+            "description": "Recommended consolidation of government AI contracts",
+            "entity_affected": "Various_AI_vendors",
+            "category": "ai_services",
+        },
+        {
+            "date": "2024-12-10",
+            "description": "Recommended GSA fleet electrification",
+            "entity_affected": "Legacy_auto_manufacturers",
+            "category": "gsa_fleet",
+        },
+    ]
+
+
+def _calculate_days_between(date1: str, date2: str) -> int:
+    """Calculate days between two ISO date strings."""
+    try:
+        from datetime import datetime
+        d1 = datetime.fromisoformat(date1)
+        d2 = datetime.fromisoformat(date2)
+        return abs((d2 - d1).days)
+    except (ValueError, TypeError):
+        return -1  # Invalid dates
+
+
+def _affects_competitor(rec: dict, contract: dict) -> bool:
+    """Check if DOGE recommendation affects competitor of contract awardee."""
+    # Simplified logic - in production would use more sophisticated matching
+    entity = contract.get("entity", "").lower()
+    affected = rec.get("entity_affected", "").lower()
+    category = rec.get("category", "").lower()
+
+    # SpaceX benefits from cuts to ULA/Boeing
+    if entity in ["spacex", "starlink"] and any(x in affected for x in ["ula", "boeing", "sls"]):
+        return True
+
+    # xAI benefits from cuts to other AI vendors
+    if entity == "xai" and "ai" in category:
+        return True
+
+    # Tesla benefits from cuts to legacy auto
+    if entity == "tesla" and any(x in affected for x in ["legacy", "auto", "fleet"]):
+        return True
+
+    return False
+
+
+def _emit_musk_coi_receipt(result: dict) -> dict:
+    """Emit musk_ecosystem_coi receipt."""
+    payload = {
+        "receipt_type": "musk_ecosystem_coi",
+        "tenant_id": TENANT_ID,
+        "entities_analyzed": result["entities_analyzed"],
+        "contracts_found": result["total_contracts_found"],
+        "correlated_events": len(result["correlated_events"]),
+        "coi_score": result["coi_score"],
+        "verdict": result["verdict"],
+    }
+
+    return emit_receipt("musk_ecosystem_coi", {
+        **payload,
+        "module": MODULE_ID,
         "payload_hash": dual_hash(json.dumps(payload, sort_keys=True)),
         "simulation_flag": DISCLAIMER,
     }, to_stdout=False)

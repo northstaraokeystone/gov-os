@@ -5,9 +5,14 @@ THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY
 
 Verify foreign aid claims and detect anomalies:
 - verify_aid_claim: Verify specific claims (waste, round_trip, overhead, etc.)
-- detect_round_trip: Detect round-trip funding pattern
+- detect_round_trip: Detect round-trip funding pattern (v6.3: supports UN pathway)
 - calculate_overhead_ratio: Analyze admin cost ratios
 - compare_to_baseline: Compare to legitimate aid patterns
+
+v6.3 Changes:
+- Extended detect_round_trip() with pathway parameter ("usaid" | "un" | "both")
+- Added UN round-trip pathway: US_GOV → UN_AGENCY → US_NGO → FEC
+- Added un_round_trip_receipt emission
 """
 
 import json
@@ -20,6 +25,10 @@ from .config import (
     OVERHEAD_RATIO_THRESHOLD,
     CROSS_MODULE_LINKS,
     DISCLAIMER,
+    # v6.3 UN pathway
+    UN_PATHWAY_ENABLED,
+    UN_VOLUNTARY_AGENCIES,
+    UN_ROUND_TRIP_PATHWAY,
 )
 from .data import ImplementingPartner, RoundTripEvidence, AidAnomaly
 from .receipts import AidVerificationReceipt, RoundTripReceipt, OverheadReceipt
@@ -177,30 +186,56 @@ def verify_aid_claim(
 def detect_round_trip(
     partner_id: str,
     partner_name: Optional[str] = None,
+    pathway: str = "usaid",
     _simulate: bool = True
 ) -> Dict[str, Any]:
     """
     Detect round-trip funding for specific implementing partner.
 
-    Round-trip pattern:
-    1. NGO receives federal grant
-    2. NGO (or officers) make political donations
-    3. Ratio exceeds threshold
+    v6.3: Extended to support UN pathway.
+
+    Round-trip patterns:
+    - USAID: US_GOV → USAID → NGO → FEC (v6.2)
+    - UN: US_GOV → UN_AGENCY → NGO → FEC (v6.3 NEW)
 
     Args:
         partner_id: Partner identifier (EIN or internal ID)
         partner_name: Optional partner name
+        pathway: "usaid" | "un" | "both" (NEW in v6.3)
         _simulate: If True, use simulated data
 
     Returns:
         Detection result with score and flag status
 
     Emits:
-        round_trip_receipt
+        round_trip_receipt (for USAID pathway)
+        un_round_trip_receipt (for UN pathway)
     """
+    # v6.3: Validate pathway parameter
+    valid_pathways = ["usaid", "un", "both"]
+    if pathway not in valid_pathways:
+        return {
+            "partner_id": partner_id,
+            "error": f"Invalid pathway: {pathway}. Must be one of {valid_pathways}",
+            "flagged": False,
+            "simulation_flag": DISCLAIMER,
+        }
+
+    # v6.3: Check if UN pathway is enabled
+    if pathway in ["un", "both"] and not UN_PATHWAY_ENABLED:
+        return {
+            "partner_id": partner_id,
+            "error": "UN pathway detection is disabled in config",
+            "flagged": False,
+            "simulation_flag": DISCLAIMER,
+        }
+
     federal_awards_total = 0.0
     political_donations_total = 0.0
     temporal_correlation = 0.0
+    un_agency = None
+    us_contribution_to_agency = 0.0
+    un_grant_to_partner = 0.0
 
     try:
         if ForeignAidETL is not None:
@@ -216,6 +251,18 @@ def detect_round_trip(
             federal_awards_total = _simulate_federal_awards(partner_id)
             political_donations_total = _simulate_political_donations(partner_id)
             temporal_correlation = _calculate_temporal_correlation(_simulate)
+
+        # v6.3: Simulate UN pathway data if requested
+        if pathway in ["un", "both"]:
+            un_data = _simulate_un_pathway_data(partner_id)
+            un_agency = un_data.get("un_agency")
+            us_contribution_to_agency = un_data.get("us_contribution_to_agency", 0)
+            un_grant_to_partner = un_data.get("un_grant_to_partner", 0)
+            # For UN pathway, the "federal awards" includes UN pass-through
+            if pathway == "un":
+                federal_awards_total = un_grant_to_partner
+            elif pathway == "both":
+                federal_awards_total += un_grant_to_partner
 
     except Exception as e:
         return {
@@ -234,6 +281,17 @@ def detect_round_trip(
 
     flagged = round_trip_score >= ROUND_TRIP_THRESHOLD
 
+    # Determine funding source for receipt
+    if pathway == "usaid":
+        funding_source = "USAID"
+        pathway_desc = "US_GOV → USAID → NGO → FEC"
+    elif pathway == "un":
+        funding_source = un_agency or "UN_AGENCY"
+        pathway_desc = UN_ROUND_TRIP_PATHWAY
+    else:  # both
+        funding_source = f"USAID + {un_agency or 'UN_AGENCY'}"
+        pathway_desc = "Combined USAID + UN pathway"
+
     # Build receipt
     receipt = RoundTripReceipt(
         entity_id=partner_id,
@@ -245,17 +303,38 @@ def detect_round_trip(
         flagged=flagged,
         threshold_used=ROUND_TRIP_THRESHOLD,
     )
-    _emit_round_trip_receipt(receipt)
+
+    # Emit appropriate receipt based on pathway
+    if pathway == "un":
+        _emit_un_round_trip_receipt(
+            partner_id=partner_id,
+            partner_name=partner_name,
+            un_agency=un_agency,
+            us_contribution_to_agency=us_contribution_to_agency,
+            un_grant_to_partner=un_grant_to_partner,
+            political_donations=political_donations_total,
+            round_trip_score=round_trip_score,
+            flagged=flagged,
+        )
+    else:
+        _emit_round_trip_receipt(receipt)
 
     return {
         "partner_id": partner_id,
         "partner_name": partner_name,
+        "pathway": pathway,
+        "funding_source": funding_source,
         "federal_awards_total": federal_awards_total,
         "political_donations_total": political_donations_total,
         "temporal_correlation": round(temporal_correlation, 4),
         "round_trip_score": round(round_trip_score, 4),
         "flagged": flagged,
         "threshold_used": ROUND_TRIP_THRESHOLD,
+        # v6.3 UN-specific fields
+        "un_agency": un_agency if pathway in ["un", "both"] else None,
+        "us_contribution_to_agency": us_contribution_to_agency if pathway in ["un", "both"] else None,
+        "un_grant_to_partner": un_grant_to_partner if pathway in ["un", "both"] else None,
+        "pathway_description": pathway_desc,
         "receipt": receipt.to_dict(),
         "simulation_flag": DISCLAIMER,
     }
@@ -537,6 +616,34 @@ def _calculate_temporal_correlation(_simulate: bool) -> float:
     return random.uniform(0.1, 0.5)
 
 
+def _simulate_un_pathway_data(partner_id: str) -> dict:
+    """
+    v6.3: Simulate UN pathway data for testing.
+
+    Simulates the US → UN Agency → NGO funding pathway.
+    In production, would query UN Partner Portal and related sources.
+    """
+    import random
+    random.seed(hash(partner_id) % 10000 + 1)
+
+    # Pick a random UN agency
+    agencies = UN_VOLUNTARY_AGENCIES
+    un_agency = random.choice(agencies)
+
+    # US contribution to the selected agency (billions)
+    us_contribution_to_agency = random.randint(500_000_000, 2_000_000_000)
+
+    # UN grant to this specific partner (smaller amount)
+    un_grant_to_partner = random.randint(100_000, 10_000_000)
+
+    return {
+        "un_agency": un_agency,
+        "us_contribution_to_agency": us_contribution_to_agency,
+        "un_grant_to_partner": un_grant_to_partner,
+        "pathway": UN_ROUND_TRIP_PATHWAY,
+    }
+
+
 def _interpret_comparison(overhead_dev: float, round_trip_dev: float) -> str:
     """Generate interpretation of comparison to baseline."""
     issues = []
@@ -579,6 +686,59 @@ def _emit_overhead_receipt(receipt: OverheadReceipt) -> dict:
         "tenant_id": TENANT_ID,
         "module": MODULE_ID,
         **payload,
+    }, to_stdout=False)
+
+
+def _emit_un_round_trip_receipt(
+    partner_id: str,
+    partner_name: Optional[str],
+    un_agency: Optional[str],
+    us_contribution_to_agency: float,
+    un_grant_to_partner: float,
+    political_donations: float,
+    round_trip_score: float,
+    flagged: bool,
+) -> dict:
+    """
+    v6.3: Emit un_round_trip receipt for UN pathway detection.
+
+    Receipt fields per specification:
+    - receipt_type: "un_round_trip"
+    - ts: ISO8601 timestamp
+    - tenant_id: "aid"
+    - partner_id: NGO identifier
+    - un_agency: Which UN agency
+    - us_contribution_to_agency: US funding to that UN agency
+    - un_grant_to_partner: UN grant to this NGO
+    - political_donations: NGO's FEC donations
+    - pathway: "US_GOV → UN_AGENCY → US_NGO → FEC"
+    - round_trip_score: 0-1
+    - flagged: Above threshold
+    - payload_hash: dual_hash
+    """
+    from datetime import datetime
+
+    payload = {
+        "receipt_type": "un_round_trip",
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "tenant_id": TENANT_ID,
+        "module": MODULE_ID,
+        "partner_id": partner_id,
+        "partner_name": partner_name or partner_id,
+        "un_agency": un_agency,
+        "us_contribution_to_agency": us_contribution_to_agency,
+        "un_grant_to_partner": un_grant_to_partner,
+        "political_donations": political_donations,
+        "pathway": UN_ROUND_TRIP_PATHWAY,
+        "round_trip_score": round(round_trip_score, 4),
+        "flagged": flagged,
+        "threshold_used": ROUND_TRIP_THRESHOLD,
+    }
+
+    return emit_receipt("un_round_trip", {
+        **payload,
+        "payload_hash": dual_hash(json.dumps(payload, sort_keys=True, default=str)),
+        "simulation_flag": DISCLAIMER,
     }, to_stdout=False)
 
 
