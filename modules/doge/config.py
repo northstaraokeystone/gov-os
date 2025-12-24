@@ -53,6 +53,17 @@ DOGE_CLAIM_SOURCES = {
         "date": "2024",
         "url": "https://www.gsa.gov",
     },
+    # v6.2: USAID waste claim for round-trip detection
+    "usaid_waste": {
+        "claimed_amount": "unspecified",
+        "source": "Elon Musk X post, Dec 2024",
+        "claim": "Most USAID funding went to far left political causes, including money coming back to fund the left in America",
+        "categories": ["foreign_aid", "round_trip"],
+        "date": "2024-12",
+        "url": "https://x.com/elonmusk",
+        "testable_hypothesis": "Round-trip funding detectable via FEC cross-reference",
+        "methodology": "implementing_partner_fec_correlation",
+    },
 }
 
 # === v6.1 DOGE FRAUD TARGETS ===
@@ -95,6 +106,10 @@ DOGE_DATA_COHORTS = [
     "fat_leonard",
     "federal_real_estate",
     "dod_shipbuilding",
+    # v6.2: USAID cohorts for round-trip detection
+    "usaid_implementing_partners",
+    "usaid_direct_country",
+    "state_dept_foreign_assistance",
 ]
 
 # === SIMULATION DISCLAIMER ===

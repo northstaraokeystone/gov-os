@@ -5,6 +5,45 @@ All notable changes to Gov-OS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.0] - 2024-12-24
+
+### Added
+- **AidProof module** (P1): Foreign aid accountability for USAID, State, MCC
+  - `modules/aid/` with config, ingest, verify, receipts, data, scenario
+  - Implementing partner analysis with Form 990 cross-reference
+  - Country allocation pattern detection
+- **Round-trip funding detection**: FEC + Form 990 cross-reference
+  - `detect_round_trip()` in `modules/graft/verify.py`
+  - `ROUND_TRIP_THRESHOLD = 0.10` for flagging
+- **ForeignAssistance.gov API integration**: `src/core/foreignaid_etl.py`
+  - `ForeignAidETL` class with implementing partner, FEC, 990 cross-reference
+- **USAID cohorts** in `data/usaspending_cohorts.json`:
+  - `usaid_implementing_partners`: NGO grants
+  - `usaid_direct_country`: Direct foreign grants
+  - `state_dept_foreign_assistance`: State Dept comparison
+- **Foreign aid cohorts**: `data/foreignassistance_cohorts.json`
+  - `democracy_programs`: Political activity correlation
+  - `pepfar_health`: Baseline legitimate aid
+  - `mcc_compacts`: Structured aid baseline
+- **Cross-domain links**: aid↔spend, aid↔graft, aid↔origin
+- **ZK_ENABLED flag** per module (updated)
+- **New thresholds** in `config/compression_params.yaml`:
+  - `foreign_aid_grants`: 0.50
+  - `ngo_overhead`: 0.40
+
+### Changed
+- **Contagion module** now includes 'aid' in cross-domain super-graph
+- **spec.md** updated with AidProof documentation
+- **Module count**: 12 → 13 (added aid)
+
+### Political Context
+- Tests Musk's USAID claim: "most funding went to far left political causes"
+- Provides neutral, receipts-based verification
+- Neither supports nor refutes without evidence
+- `MUSK_CLAIM` scenario in `modules/aid/scenario.py`
+
+---
+
 ## [6.1.0] - 2024-12-24
 
 ### Added

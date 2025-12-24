@@ -162,6 +162,15 @@ from .data_gate import (
     get_cohort_info,
 )
 
+from .foreignaid_etl import (
+    ForeignAidETL,
+    ForeignAidAward,
+    ImplementingPartner,
+    RoundTripEvidence,
+    get_available_agencies,
+    get_foreignaid_cohorts,
+)
+
 __all__ = [
     # Constants
     "TENANT_ID",
@@ -273,4 +282,11 @@ __all__ = [
     "RealDataGate",
     "get_available_cohorts",
     "get_cohort_info",
+    # v6.2 Foreign Aid ETL
+    "ForeignAidETL",
+    "ForeignAidAward",
+    "ImplementingPartner",
+    "RoundTripEvidence",
+    "get_available_agencies",
+    "get_foreignaid_cohorts",
 ]

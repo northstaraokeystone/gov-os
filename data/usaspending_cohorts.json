@@ -74,10 +74,55 @@
       "filters": {
         "naics_code": "336611"
       }
+    },
+    "usaid_implementing_partners": {
+      "agency": "USAID",
+      "agency_full": "U.S. Agency for International Development",
+      "award_type": "grant",
+      "date_range": {
+        "start": "2020-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 500,
+      "description": "USAID grants to US-based NGOs - round-trip funding potential",
+      "source": "USASpending.gov USAID awards",
+      "filters": {
+        "recipient_type": "nonprofit"
+      }
+    },
+    "usaid_direct_country": {
+      "agency": "USAID",
+      "agency_full": "U.S. Agency for International Development",
+      "award_type": "grant",
+      "date_range": {
+        "start": "2020-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 300,
+      "description": "USAID direct foreign grants - baseline for comparison",
+      "source": "USASpending.gov USAID awards",
+      "filters": {
+        "recipient_country_not": "USA"
+      }
+    },
+    "state_dept_foreign_assistance": {
+      "agency": "STATE",
+      "agency_full": "Department of State",
+      "award_type": "grant",
+      "date_range": {
+        "start": "2020-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 200,
+      "description": "State Department foreign assistance - compare to USAID patterns",
+      "source": "USASpending.gov State Department awards",
+      "filters": {
+        "cfda_program": "foreign_assistance"
+      }
     }
   },
   "metadata": {
-    "version": "6.1.0",
+    "version": "6.2.0",
     "last_updated": "2024-12-24",
     "api_base": "https://api.usaspending.gov/api/v2/",
     "simulation_disclaimer": "SIMULATION FOR RESEARCH PURPOSES ONLY"

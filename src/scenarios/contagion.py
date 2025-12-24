@@ -6,11 +6,19 @@ THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY
 Purpose: Test cross-domain contagion detection via super-graph merging.
 Validates that Medicaid ring collapse flags Defense vendor pre-invoice.
 
+v6.2: Added 'aid' module to cross-domain propagation for round-trip detection.
+Cross-domain links: aid↔spend, aid↔graft, aid↔origin
+
 Physics Frame:
 - Shell entity links two entropy pools (Defense + Medicaid)
 - Collapse in one domain propagates temporal rigidity to the other
 - "Defense fraud flagged pre-invoice via Medicaid contagion"
 - 2-4x earlier detection demonstrated
+
+v6.2 Aid Integration:
+- Aid module connects to spend, graft, origin
+- Round-trip pattern: NGO receives aid → makes political donations
+- Implementing partner anomalies propagate to graft module
 
 Expected Output:
 - Detected 3+ cycles (includes Medicaid ring)
@@ -71,6 +79,18 @@ DEFENSE_RING = ["WELDCO_INC", "SUBCO_A", "SUBCO_B"]
 
 # Medicaid ring pattern: MEDLAB_TESTING_LLC → CLINIC_X → CLINIC_Y → MEDLAB
 MEDICAID_RING = ["MEDLAB_TESTING_LLC", "CLINIC_X", "CLINIC_Y"]
+
+# v6.2: Aid module cross-domain links
+# Round-trip detection: NGO receives foreign aid, makes political donations
+AID_CROSS_DOMAIN_LINKS = {
+    "aid": ["spend", "graft", "origin"],
+    "spend": ["aid"],
+    "graft": ["aid"],
+    "origin": ["aid"],
+}
+
+# v6.2: Supported domains for super-graph building
+SUPPORTED_DOMAINS = ["defense", "medicaid", "aid", "spend", "graft", "origin"]
 
 
 # ============================================================================
@@ -197,6 +217,95 @@ def sample_medicaid_transactions(n: int = 100, seed: int = 43) -> List[Dict[str,
     return transactions
 
 
+def sample_aid_transactions(n: int = 50, seed: int = 44) -> List[Dict[str, Any]]:
+    """
+    v6.2: Generate synthetic foreign aid transactions for round-trip detection.
+
+    Includes:
+    - Normal legitimate NGO grants
+    - NGO with round-trip pattern (receives aid, makes political donations)
+    - Link to shell entity
+
+    Args:
+        n: Number of transactions
+        seed: Random seed
+
+    Returns:
+        List of transaction dicts
+    """
+    import random
+    random.seed(seed)
+
+    transactions = []
+    base_date = datetime(2024, 1, 1)
+
+    # Normal NGO grants
+    ngos = [f"NGO_{i}" for i in range(10)]
+    for i in range(n - 5):
+        transactions.append({
+            "source_duns": "USAID",
+            "target_duns": random.choice(ngos),
+            "amount_usd": random.random() * 10_000_000,
+            "date": base_date + timedelta(days=random.randint(0, 365)),
+            "domain": "aid",
+        })
+
+    # Round-trip pattern NGO (receives aid, makes political donations)
+    round_trip_date = base_date - timedelta(days=90)
+    transactions.append({
+        "source_duns": "USAID",
+        "target_duns": "DEMOCRACY_INTL_NGO",
+        "amount_usd": 50_000_000,
+        "date": round_trip_date,
+        "domain": "aid",
+        "_is_round_trip": True,
+    })
+    transactions.append({
+        "source_duns": "DEMOCRACY_INTL_NGO",
+        "target_duns": "FEC_DONATIONS",  # Political donations
+        "amount_usd": 2_000_000,
+        "date": round_trip_date + timedelta(days=30),
+        "domain": "aid",
+        "_is_round_trip": True,
+    })
+
+    # Link to shell entity
+    transactions.append({
+        "source_duns": "DEMOCRACY_INTL_NGO",
+        "target_duns": SHELL_ENTITY_ID,
+        "amount_usd": 1_000_000,
+        "date": round_trip_date,
+        "domain": "aid",
+        "_is_fraud": True,
+    })
+
+    return transactions
+
+
+def identify_shared_entities_with_aid(
+    domain_graphs: Dict[str, 'nx.DiGraph'],
+) -> Dict[str, List[str]]:
+    """
+    v6.2: Identify shared entities across domains including aid module.
+
+    Args:
+        domain_graphs: Dict mapping domain names to their graphs
+
+    Returns:
+        Dict mapping entity IDs to list of domains they appear in
+    """
+    entity_domains = {}
+    for domain, G in domain_graphs.items():
+        for node in G.nodes():
+            if node not in entity_domains:
+                entity_domains[node] = []
+            entity_domains[node].append(domain)
+
+    # Filter to entities in multiple domains
+    shared = {k: v for k, v in entity_domains.items() if len(v) > 1}
+    return shared
+
+
 # ============================================================================
 # SUPER-GRAPH BUILDING
 # ============================================================================
@@ -265,15 +374,18 @@ def inject_shell_entity(
 def build_super_graph(
     defense_transactions: List[Dict[str, Any]] = None,
     medicaid_transactions: List[Dict[str, Any]] = None,
+    aid_transactions: List[Dict[str, Any]] = None,
 ) -> 'nx.DiGraph':
     """
-    Build super-graph by merging defense and medicaid domain graphs.
+    Build super-graph by merging defense, medicaid, and aid domain graphs.
 
     This is the core v5.1 capability: cross-domain analysis.
+    v6.2: Added aid module for round-trip funding detection.
 
     Args:
         defense_transactions: Defense domain transactions (optional)
         medicaid_transactions: Medicaid domain transactions (optional)
+        aid_transactions: Foreign aid domain transactions (optional, v6.2)
 
     Returns:
         Merged super-graph with cross-domain edges
@@ -289,62 +401,79 @@ def build_super_graph(
         defense_transactions = sample_defense_transactions()
     if medicaid_transactions is None:
         medicaid_transactions = sample_medicaid_transactions()
+    if aid_transactions is None:
+        aid_transactions = sample_aid_transactions()
 
     # Build domain graphs
     G_defense = build_domain_graph(defense_transactions, "defense")
     G_medicaid = build_domain_graph(medicaid_transactions, "medicaid")
+    G_aid = build_domain_graph(aid_transactions, "aid")
+
+    # v6.2: Store all domain graphs
+    domain_graphs = {
+        "defense": G_defense,
+        "medicaid": G_medicaid,
+        "aid": G_aid,
+    }
 
     # Merge into super-graph
     G = nx.DiGraph()
 
-    # Add defense edges
-    for u, v, data in G_defense.edges(data=True):
-        G.add_edge(u, v, **data)
-
-    # Add medicaid edges
-    for u, v, data in G_medicaid.edges(data=True):
-        if G.has_edge(u, v):
-            # Edge exists - merge domains
-            existing_domains = G[u][v].get("domains", [G[u][v].get("domain", "unknown")])
-            if isinstance(existing_domains, str):
-                existing_domains = [existing_domains]
-            existing_domains.append("medicaid")
-            G[u][v]["domains"] = existing_domains
-        else:
-            G.add_edge(u, v, **data)
-
-    # Copy node attributes
-    for node, data in G_defense.nodes(data=True):
-        if G.has_node(node):
-            G.nodes[node].update(data)
-    for node, data in G_medicaid.nodes(data=True):
-        if G.has_node(node):
-            # Merge domain info
-            existing = G.nodes[node].get("domain")
-            if existing and existing != data.get("domain"):
-                G.nodes[node]["domains"] = [existing, data.get("domain")]
+    # Helper function to add edges from a domain graph
+    def add_domain_edges(domain_graph, domain_name):
+        for u, v, data in domain_graph.edges(data=True):
+            if G.has_edge(u, v):
+                # Edge exists - merge domains
+                existing_domains = G[u][v].get("domains", [G[u][v].get("domain", "unknown")])
+                if isinstance(existing_domains, str):
+                    existing_domains = [existing_domains]
+                existing_domains.append(domain_name)
+                G[u][v]["domains"] = existing_domains
             else:
-                G.nodes[node].update(data)
+                G.add_edge(u, v, **data)
 
-    # Identify shared entities
-    defense_nodes = set(G_defense.nodes())
-    medicaid_nodes = set(G_medicaid.nodes())
-    shared_entities = defense_nodes.intersection(medicaid_nodes)
+    # Add edges from all domains
+    for domain_name, domain_graph in domain_graphs.items():
+        add_domain_edges(domain_graph, domain_name)
 
-    # Mark shell entity
+    # Copy node attributes from all domains
+    for domain_name, domain_graph in domain_graphs.items():
+        for node, data in domain_graph.nodes(data=True):
+            if G.has_node(node):
+                existing = G.nodes[node].get("domain")
+                if existing and existing != data.get("domain"):
+                    # Merge domain info
+                    existing_domains = G.nodes[node].get("domains", [existing])
+                    if isinstance(existing_domains, str):
+                        existing_domains = [existing_domains]
+                    if domain_name not in existing_domains:
+                        existing_domains.append(domain_name)
+                    G.nodes[node]["domains"] = existing_domains
+                else:
+                    G.nodes[node].update(data)
+
+    # v6.2: Identify shared entities across all domains
+    shared_entities_map = identify_shared_entities_with_aid(domain_graphs)
+    shared_entities = list(shared_entities_map.keys())
+
+    # Mark shell entity (now appears in defense, medicaid, and aid)
     inject_shell_entity(G, SHELL_ENTITY_ID, "SUBCO_B", "CLINIC_Y")
+    if G.has_node(SHELL_ENTITY_ID):
+        G.nodes[SHELL_ENTITY_ID]["linked_domains"] = ["defense", "medicaid", "aid"]
 
     # Detect cycles in super-graph
     cycles = detect_cycles(G)
 
     # Store graph-level metadata
-    G.graph["domains"] = {"defense": G_defense, "medicaid": G_medicaid}
-    G.graph["shared_entities"] = list(shared_entities)
+    G.graph["domains"] = domain_graphs
+    G.graph["shared_entities"] = shared_entities
+    G.graph["shared_entities_map"] = shared_entities_map
     G.graph["cycles"] = cycles
+    G.graph["aid_cross_domain_links"] = AID_CROSS_DOMAIN_LINKS
 
-    # Emit super-graph receipt
+    # Emit super-graph receipt (v6.2: includes aid domain)
     emit_super_graph_receipt(
-        domains=["defense", "medicaid"],
+        domains=["defense", "medicaid", "aid"],
         total_nodes=G.number_of_nodes(),
         total_edges=G.number_of_edges(),
         shared_entities=len(shared_entities),
