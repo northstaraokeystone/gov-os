@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "description": "Musk ecosystem entities for COI detection",
+  "entities": {
+    "spacex": {
+      "legal_name": "Space Exploration Technologies Corp.",
+      "duns": "LOOKUP_REQUIRED",
+      "cage_codes": ["LOOKUP_REQUIRED"],
+      "sam_uei": "LOOKUP_REQUIRED",
+      "agencies": ["DOD", "NASA", "NRO", "USSF"],
+      "contract_types": ["launch_services", "satellite_comms", "rideshare"]
+    },
+    "starlink": {
+      "legal_name": "Starlink Services, LLC",
+      "parent": "spacex",
+      "duns": "LOOKUP_REQUIRED",
+      "sam_uei": "LOOKUP_REQUIRED",
+      "agencies": ["DOD", "USAID", "STATE"],
+      "contract_types": ["communications", "internet_services"]
+    },
+    "tesla": {
+      "legal_name": "Tesla, Inc.",
+      "duns": "LOOKUP_REQUIRED",
+      "sam_uei": "LOOKUP_REQUIRED",
+      "agencies": ["GSA", "DOE", "DOD"],
+      "contract_types": ["vehicles", "energy_storage", "solar"]
+    },
+    "boring_company": {
+      "legal_name": "The Boring Company",
+      "duns": "LOOKUP_REQUIRED",
+      "sam_uei": "LOOKUP_REQUIRED",
+      "agencies": ["DOT", "LOCAL"],
+      "contract_types": ["infrastructure", "tunneling"]
+    },
+    "neuralink": {
+      "legal_name": "Neuralink Corp.",
+      "duns": "LOOKUP_REQUIRED",
+      "sam_uei": "LOOKUP_REQUIRED",
+      "agencies": ["NIH", "VA", "DARPA"],
+      "contract_types": ["research_grants", "medical_devices"]
+    },
+    "xai": {
+      "legal_name": "xAI Corp.",
+      "duns": "LOOKUP_REQUIRED",
+      "sam_uei": "LOOKUP_REQUIRED",
+      "agencies": ["DOD"],
+      "contract_types": ["ai_services", "software"],
+      "known_contracts": [
+        {
+          "name": "GenAIMil Integration",
+          "announced": "2024-12-22",
+          "value": "LOOKUP_REQUIRED",
+          "fpds_id": "LOOKUP_REQUIRED",
+          "status": "announced_not_in_fpds"
+        }
+      ]
+    }
+  },
+  "doge_leadership": {
+    "musk": {
+      "role": "DOGE co-lead",
+      "start_date": "2024-11-12",
+      "entities_affiliated": ["spacex", "starlink", "tesla", "boring_company", "neuralink", "xai"]
+    }
+  },
+  "coi_detection_config": {
+    "contract_lookback_days": 365,
+    "doge_recommendation_correlation_window_days": 90,
+    "minimum_contract_value_usd": 100000
+  },
+  "metadata": {
+    "created": "2024-12-24",
+    "simulation_disclaimer": "SIMULATION FOR RESEARCH PURPOSES ONLY",
+    "note": "DUNS/CAGE/UEI values marked LOOKUP_REQUIRED should be populated via SAM.gov lookup"
+  }
+}

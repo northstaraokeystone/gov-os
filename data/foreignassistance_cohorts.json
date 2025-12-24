@@ -62,10 +62,45 @@
       "min_records": 400,
       "description": "Humanitarian assistance - emergency response baseline",
       "source": "ForeignAssistance.gov humanitarian data"
+    },
+    "un_assessed_contributions": {
+      "description": "Mandatory US contributions to UN regular budget and peacekeeping",
+      "source": "state_dept_io_budget",
+      "agencies": ["UN_REGULAR", "UN_PEACEKEEPING"],
+      "characteristics": {
+        "mandatory": true,
+        "implementing_partners": false,
+        "round_trip_risk": "low"
+      },
+      "fy2024_estimate_usd": 3200000000,
+      "note": "US pays ~22% of regular budget, ~27% of peacekeeping"
+    },
+    "un_voluntary_contributions": {
+      "description": "Discretionary US contributions to UN agencies",
+      "source": "usaspending_un_agencies",
+      "agencies": ["UNICEF", "UNDP", "WFP", "UNHCR", "WHO", "UNFPA", "UNRWA"],
+      "characteristics": {
+        "mandatory": false,
+        "implementing_partners": true,
+        "round_trip_risk": "medium"
+      },
+      "fy2024_estimate_usd": 8500000000,
+      "note": "Higher fraud potential due to implementing partner structure"
+    },
+    "un_implementing_partners": {
+      "description": "US-based NGOs receiving UN pass-through funding",
+      "source": "un_partner_portal",
+      "pathway": "US_GOV -> UN_AGENCY -> US_NGO",
+      "characteristics": {
+        "implementing_partners": true,
+        "round_trip_risk": "high",
+        "fec_crossref_required": true
+      },
+      "note": "Longer round-trip pathway than direct USAID grants"
     }
   },
   "metadata": {
-    "version": "6.2.0",
+    "version": "6.3.0",
     "last_updated": "2024-12-24",
     "api_base": "https://api.foreignassistance.gov/v1/",
     "data_sources": {

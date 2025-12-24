@@ -7,12 +7,23 @@ v6.2 New:
 - detect_round_trip(): Detect if entity receives gov funds AND makes political donations
 - FEC cross-reference for political donation correlation
 
+v6.3 New:
+- temporal_correlation_analysis(): Detect suspicious timing between political events
+  and contract awards
+- Cross-module integration with doge/ for DOGE recommendation correlation
+
 Round-Trip Detection Logic:
 1. Query: Does entity receive federal grants/contracts?
 2. Query: Does entity (or officers) make FEC-reportable donations?
 3. Query: Is there temporal correlation (donation within 90 days of award)?
 4. Calculate: round_trip_score = correlation_strength × donation_amount / award_amount
 5. Flag if score > threshold
+
+Temporal Correlation Logic (v6.3):
+1. For each award, find events within window_days BEFORE award_date
+2. Score each event-award pair by time decay, event weight, and value
+3. Aggregate and calculate statistical significance
+4. Emit temporal_correlation_receipt
 """
 
 import json
@@ -28,6 +39,11 @@ from .config import (
     ROUND_TRIP_THRESHOLD,
     TEMPORAL_CORRELATION_DAYS,
     DISCLAIMER,
+    # v6.3 temporal correlation
+    TEMPORAL_CORRELATION_ENABLED,
+    EVENT_TYPE_WEIGHTS,
+    DEFAULT_TEMPORAL_WINDOW_DAYS,
+    MIN_SAMPLE_SIZE,
 )
 
 # Import core utilities
@@ -369,6 +385,227 @@ def _interpret_scan_results(
             f"Low round-trip incidence. {flagged_count} of {total_scanned} "
             f"partners ({flag_rate:.1%}) flagged. No systematic pattern detected."
         )
+
+
+# === v6.3 TEMPORAL CORRELATION ANALYSIS ===
+
+
+def temporal_correlation_analysis(
+    events: List[Dict[str, Any]],
+    awards: List[Dict[str, Any]],
+    window_days: int = None,
+) -> Dict[str, Any]:
+    """
+    v6.3: Analyze timing patterns between political events and contract awards.
+
+    Detects suspicious timing patterns where political events (DOGE announcements,
+    policy changes, personnel changes) precede contract awards.
+
+    Pattern: Event occurs → Award follows within window → Correlation flagged
+
+    Algorithm:
+    1. For each award:
+       a) Find all events within window_days BEFORE award_date
+       b) Score each event-award pair by:
+          - Days between (closer = higher score)
+          - Event type weight (DOGE_RECOMMENDATION > POLICY_CHANGE > PERSONNEL)
+          - Award value (higher = more significant)
+
+    2. Aggregate correlation score:
+       temporal_score = Σ(event_weight × value_weight × time_decay) / total_awards
+
+    3. Statistical significance:
+       - Compare to baseline: random timing would show uniform distribution
+       - Clustering around event dates suggests correlation
+
+    4. Emit temporal_correlation_receipt
+
+    Args:
+        events: List of event dicts with {event_type, date, description, entity_affected}
+        awards: List of award dicts with {contract_id, award_date, value, awardee}
+        window_days: Correlation window (default from config)
+
+    Returns:
+        dict with:
+        - events_analyzed: int
+        - awards_analyzed: int
+        - correlations_found: int
+        - correlation_details: list[dict]
+        - temporal_score: float (0-1 aggregate)
+        - statistical_significance: float (p-value)
+        - verdict: "pattern_detected" | "no_pattern" | "insufficient_data"
+        - receipt: dict
+
+    Example:
+        >>> events = [{"event_type": "DOGE_RECOMMENDATION", "date": "2024-11-01", ...}]
+        >>> awards = [{"contract_id": "ABC-123", "award_date": "2024-11-15", ...}]
+        >>> result = temporal_correlation_analysis(events, awards)
+        >>> print(f"Temporal Score: {result['temporal_score']:.2f}")
+
+    Note:
+        Correlation ≠ causation. This flags patterns, not guilt.
+        Requires sufficient sample size (min 10 awards recommended).
+    """
+    if not TEMPORAL_CORRELATION_ENABLED:
+        return {
+            "error": "Temporal correlation analysis disabled in config",
+            "verdict": "insufficient_data",
+            "simulation_flag": DISCLAIMER,
+        }
+
+    # Use default window if not specified
+    if window_days is None:
+        window_days = DEFAULT_TEMPORAL_WINDOW_DAYS
+
+    events_analyzed = len(events)
+    awards_analyzed = len(awards)
+    correlations_found = 0
+    correlation_details = []
+    total_score = 0.0
+
+    # Check minimum sample size
+    if awards_analyzed < MIN_SAMPLE_SIZE:
+        return {
+            "events_analyzed": events_analyzed,
+            "awards_analyzed": awards_analyzed,
+            "correlations_found": 0,
+            "correlation_details": [],
+            "temporal_score": 0.0,
+            "statistical_significance": 1.0,
+            "verdict": "insufficient_data",
+            "note": f"Minimum {MIN_SAMPLE_SIZE} awards required for analysis",
+            "simulation_flag": DISCLAIMER,
+        }
+
+    try:
+        for award in awards:
+            award_date = award.get("award_date", "")
+            award_value = award.get("value", 0)
+            contract_id = award.get("contract_id", "unknown")
+            awardee = award.get("awardee", "unknown")
+
+            for event in events:
+                event_date = event.get("date", "")
+                event_type = event.get("event_type", "OTHER")
+                event_desc = event.get("description", "")
+
+                # Calculate days between (event should be BEFORE award)
+                days_between = _calc_days_between(event_date, award_date)
+
+                # Only consider events that precede the award within window
+                if 0 <= days_between <= window_days:
+                    # Calculate correlation score for this pair
+                    time_decay = 1.0 - (days_between / window_days)  # Closer = higher
+                    event_weight = EVENT_TYPE_WEIGHTS.get(event_type, 0.2)
+                    value_weight = min(1.0, award_value / 100_000_000)  # Normalize to 100M
+
+                    pair_score = time_decay * event_weight * (0.5 + value_weight * 0.5)
+
+                    correlation_details.append({
+                        "event_type": event_type,
+                        "event_date": event_date,
+                        "event_description": event_desc,
+                        "award_id": contract_id,
+                        "award_date": award_date,
+                        "award_value": award_value,
+                        "awardee": awardee,
+                        "days_between": days_between,
+                        "correlation_score": round(pair_score, 4),
+                    })
+
+                    correlations_found += 1
+                    total_score += pair_score
+
+        # Calculate aggregate temporal score
+        if awards_analyzed > 0:
+            temporal_score = min(1.0, total_score / awards_analyzed)
+        else:
+            temporal_score = 0.0
+
+        # Calculate statistical significance (simplified)
+        # Under null hypothesis (no correlation), events would be uniformly distributed
+        # We use a simple heuristic: p-value based on correlation rate
+        expected_correlation_rate = window_days / 365.0  # Expected if random
+        observed_correlation_rate = correlations_found / max(1, awards_analyzed * events_analyzed)
+
+        if observed_correlation_rate > 0 and expected_correlation_rate > 0:
+            # Simple significance estimate
+            ratio = observed_correlation_rate / expected_correlation_rate
+            p_value = max(0.001, 1.0 / (1.0 + ratio ** 2))
+        else:
+            p_value = 1.0
+
+        # Determine verdict
+        if correlations_found == 0:
+            verdict = "no_pattern"
+        elif temporal_score >= 0.3 and p_value < 0.05:
+            verdict = "pattern_detected"
+        elif temporal_score >= 0.1:
+            verdict = "weak_pattern"
+        else:
+            verdict = "no_pattern"
+
+    except Exception as e:
+        return {
+            "error": str(e),
+            "verdict": "insufficient_data",
+            "simulation_flag": DISCLAIMER,
+        }
+
+    # Build result
+    result = {
+        "events_analyzed": events_analyzed,
+        "awards_analyzed": awards_analyzed,
+        "correlations_found": correlations_found,
+        "correlation_details": correlation_details,
+        "temporal_score": round(temporal_score, 4),
+        "statistical_significance": round(p_value, 4),
+        "window_days": window_days,
+        "verdict": verdict,
+    }
+
+    # Emit receipt
+    receipt = _emit_temporal_correlation_receipt(result)
+    result["receipt"] = receipt
+    result["simulation_flag"] = DISCLAIMER
+
+    return result
+
+
+def _calc_days_between(date1: str, date2: str) -> int:
+    """Calculate days between two ISO date strings (date1 before date2 = positive)."""
+    try:
+        from datetime import datetime
+        d1 = datetime.fromisoformat(date1)
+        d2 = datetime.fromisoformat(date2)
+        delta = (d2 - d1).days
+        return delta
+    except (ValueError, TypeError):
+        return -1  # Invalid dates
+
+
+def _emit_temporal_correlation_receipt(result: dict) -> dict:
+    """Emit temporal_correlation receipt."""
+    from datetime import datetime
+
+    payload = {
+        "receipt_type": "temporal_correlation",
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "tenant_id": TENANT_ID,
+        "module": MODULE_ID,
+        "events_analyzed": result["events_analyzed"],
+        "awards_analyzed": result["awards_analyzed"],
+        "correlations_found": result["correlations_found"],
+        "temporal_score": result["temporal_score"],
+        "p_value": result["statistical_significance"],
+        "verdict": result["verdict"],
+    }
+
+    return emit_receipt("temporal_correlation", {
+        **payload,
+        "payload_hash": dual_hash(json.dumps(payload, sort_keys=True, default=str)),
+        "simulation_flag": DISCLAIMER,
+    }, to_stdout=False)
 
 
 # === MODULE SELF-TEST ===

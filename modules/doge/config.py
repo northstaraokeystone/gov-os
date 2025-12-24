@@ -1,5 +1,5 @@
 """
-Gov-OS DOGE Module Configuration - v6.1
+Gov-OS DOGE Module Configuration - v6.3
 
 THIS IS A SIMULATION FOR ACADEMIC RESEARCH PURPOSES ONLY
 
@@ -8,6 +8,11 @@ v6.1 Changes:
 - Added DOGE_FRAUD_TARGETS for target fraud categories
 - Added DOGE_DATA_COHORTS for validation cohorts
 - ZK_ENABLED = False (public spending data, no PII)
+
+v6.3 Changes:
+- Added MUSK_ECOSYSTEM_ENTITIES for COI detection
+- Added COI_DETECTION_ENABLED, COI_CORRELATION_WINDOW_DAYS, COI_MIN_CONTRACT_VALUE
+- Added pentagon_xai claim to DOGE_CLAIM_SOURCES
 """
 
 # === MODULE IDENTITY ===
@@ -19,11 +24,27 @@ RECEIPT_TYPES = [
     "doge_validation",
     "doge_claim",
     "efficiency_claim",
+    "musk_ecosystem_coi",  # v6.3: Musk ecosystem COI detection receipt
 ]
 
 # === v6.1 ZK CONFIGURATION ===
 
 ZK_ENABLED = False  # No PII in this module - public spending data
+
+# === v6.3 MUSK ECOSYSTEM COI DETECTION ===
+
+MUSK_ECOSYSTEM_ENTITIES = [
+    "spacex",
+    "starlink",
+    "tesla",
+    "boring_company",
+    "neuralink",
+    "xai",
+]
+
+COI_DETECTION_ENABLED = True  # Enable conflict of interest detection
+COI_CORRELATION_WINDOW_DAYS = 90  # Days to look for DOGE rec → contract correlation
+COI_MIN_CONTRACT_VALUE = 100000  # Minimum contract value to flag
 
 # === v6.1 DOGE CLAIM SOURCES ===
 # Official DOGE savings claims for validation
@@ -63,6 +84,15 @@ DOGE_CLAIM_SOURCES = {
         "url": "https://x.com/elonmusk",
         "testable_hypothesis": "Round-trip funding detectable via FEC cross-reference",
         "methodology": "implementing_partner_fec_correlation",
+    },
+    # v6.3: Pentagon-xAI deal for COI detection
+    "pentagon_xai": {
+        "claimed_amount": "undisclosed",
+        "source": "Pentagon announcement, Dec 22, 2024",
+        "claim": "xAI Grok to 3M military/civilian personnel via GenAIMil",
+        "categories": ["dod_contracts", "ai_services", "musk_ecosystem"],
+        "coi_flag": True,  # Musk leads DOGE + wins contract
+        "date": "2024-12-22",
     },
 }
 

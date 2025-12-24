@@ -30,6 +30,7 @@ Gov-OS detects government fraud by measuring data complexity.
 | **P1** | Coin | Crypto verification | $3B+ |
 | **P1** | Origin | Supply chain | $500B counterfeit |
 | **P1** | Graft | FBI corruption | Cases |
+| **P1** | Aid | Foreign aid accountability | $11.7B UN + USAID |
 | **P1** | Warrant | Military efficiency | $850B |
 | **P2** | Lab | Science reproducibility | Research |
 
@@ -62,6 +63,80 @@ Modules handling personal data (Claim, Benefit) use ZK proofs. Verify fraud with
 
 ### Self-Improvement Loop
 System monitors its own detection patterns. Learns from manual interventions. Proposes automation. Human-in-the-loop approval for high-risk actions.
+
+---
+
+## v6.3 Extensions
+
+### Musk Ecosystem COI Detection
+
+**Module:** DOGE
+
+**Political Hook:** DOGE leader recommends cuts → affiliated company wins contracts = COI pattern.
+
+| Entity | Agencies | Contract Types |
+|--------|----------|----------------|
+| SpaceX | DOD, NASA, NRO | Launch services, satellite comms |
+| Starlink | DOD, USAID, STATE | Communications |
+| Tesla | GSA, DOE, DOD | Vehicles, energy storage |
+| xAI | DOD | AI services (GenAIMil) |
+| Neuralink | NIH, VA, DARPA | Medical devices |
+| Boring Co | DOT | Infrastructure |
+
+**Function:** `detect_musk_ecosystem_coi(lookback_days=365)`
+
+**Receipt:** `musk_ecosystem_coi_receipt`
+
+### UN Round-Trip Detection
+
+**Module:** AID
+
+**Political Hook:** Same round-trip methodology as USAID, extended to UN implementing partners.
+
+**Pathway:** US_GOV → UN_AGENCY → US_NGO → FEC
+
+| UN Agency | Type | Round-Trip Risk |
+|-----------|------|-----------------|
+| UN_REGULAR | Assessed | Low |
+| UN_PEACEKEEPING | Assessed | Low |
+| UNICEF, UNDP, WFP, etc. | Voluntary | Medium-High |
+
+**Function:** `detect_round_trip(partner_id, pathway="un")`
+
+**Receipt:** `un_round_trip_receipt`
+
+### Temporal Correlation Analysis
+
+**Module:** Graft
+
+**Political Hook:** Detect timing patterns between political events and contract awards.
+
+| Event Type | Weight |
+|------------|--------|
+| DOGE_RECOMMENDATION | 1.0 |
+| BUDGET_CUT | 0.8 |
+| PERSONNEL_CHANGE | 0.6 |
+| POLICY_ANNOUNCEMENT | 0.4 |
+
+**Function:** `temporal_correlation_analysis(events, awards, window_days=90)`
+
+**Receipt:** `temporal_correlation_receipt`
+
+### IL5 Scope Boundary
+
+**Document:** `docs/il5_scope.md`
+
+Gov-OS operates on PUBLIC data only:
+- USASpending.gov
+- FPDS-NG
+- SAM.gov (public)
+- FEC.gov
+- ForeignAssistance.gov
+
+Gov-OS does NOT access:
+- CUI (Controlled Unclassified Information)
+- IL4/IL5/IL6 data
+- Classified systems
 
 ---
 
@@ -215,6 +290,7 @@ gov-os/
 │   │   ├── coin/                       # CoinProof (P1)
 │   │   ├── origin/                     # OriginProof (P1)
 │   │   ├── graft/                      # GraftProof (P1)
+│   │   ├── aid/                        # AidProof (P1) - Foreign aid accountability
 │   │   ├── warrant/                    # WarrantProof (P1)
 │   │   └── lab/                        # LabProof (P2)
 │   │
@@ -353,6 +429,8 @@ Every module in `modules/` implements:
 
 **Module-Specific:** doge_proof, qed_claim, disbursement_proof, audit_compress, green_proof, emissions_anchor, benefit_disburse, fraud_compress, vote_proof, tally_anchor, claim_proof, safety_proof, adverse_event, wallet_cluster, revenue_share, tier_auth, origin_chain, graft_proof, case_chain, warrant_proof, lab_proof
 
+**v6.3:** musk_ecosystem_coi, un_round_trip, temporal_correlation
+
 **ShieldProof:** contract, milestone, payment, variance, dashboard, anchor, anomaly
 
 ## ShieldProof Receipt Types
@@ -405,6 +483,15 @@ gov-os export --scenario BASELINE
 gov-os doge ingest --claim FILE
 gov-os doge verify --claim-id ID
 gov-os doge scenario BASELINE
+gov-os doge coi --lookback 365         # v6.3: Musk ecosystem COI detection
+
+# Aid (v6.3)
+gov-os aid round-trip --partner-id ID --pathway usaid
+gov-os aid round-trip --partner-id ID --pathway un
+gov-os aid round-trip --partner-id ID --pathway both
+
+# Graft (v6.3)
+gov-os graft temporal --events FILE --awards FILE --window 90
 
 # Spend
 gov-os spend verify --conservation
