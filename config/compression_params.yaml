@@ -30,6 +30,14 @@ thresholds:
   # Personnel costs - tight distribution
   personnel: 0.50
 
+  # v6.2: Foreign aid grants - USAID implementing partners
+  # Source: ForeignAssistance.gov pattern analysis
+  foreign_aid_grants: 0.50
+
+  # v6.2: NGO administrative costs - overhead ratio analysis
+  # Source: Form 990 nonprofit financials
+  ngo_overhead: 0.40
+
 calibration:
   # Method for computing threshold from data
   method: "percentile_90"

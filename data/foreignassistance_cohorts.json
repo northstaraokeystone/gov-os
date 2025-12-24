@@ -1,0 +1,80 @@
+{
+  "cohorts": {
+    "democracy_programs": {
+      "sector": "democracy_governance",
+      "sector_full": "Democracy, Human Rights, and Governance",
+      "agencies": ["USAID", "STATE"],
+      "date_range": {
+        "start": "2020-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 300,
+      "description": "Democracy promotion programs - political activity correlation analysis",
+      "source": "ForeignAssistance.gov sector data",
+      "political_hook": "Musk claim: funds 'far left political causes'"
+    },
+    "pepfar_health": {
+      "program": "PEPFAR",
+      "program_full": "President's Emergency Plan for AIDS Relief",
+      "agencies": ["STATE", "HHS", "USAID"],
+      "date_range": {
+        "start": "2020-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 500,
+      "description": "AIDS relief programs - baseline legitimate aid pattern",
+      "source": "ForeignAssistance.gov PEPFAR data",
+      "note": "Baseline for comparison - widely supported, bipartisan"
+    },
+    "mcc_compacts": {
+      "agency": "MCC",
+      "agency_full": "Millennium Challenge Corporation",
+      "award_type": "compact",
+      "date_range": {
+        "start": "2015-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 100,
+      "description": "MCC country compacts - structured aid with accountability baseline",
+      "source": "ForeignAssistance.gov MCC data",
+      "note": "MCC has strict accountability requirements"
+    },
+    "education_programs": {
+      "sector": "education",
+      "sector_full": "Education and Social Services",
+      "agencies": ["USAID", "STATE"],
+      "date_range": {
+        "start": "2020-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 200,
+      "description": "Education programs - cultural exchange correlation",
+      "source": "ForeignAssistance.gov sector data"
+    },
+    "humanitarian_assistance": {
+      "sector": "humanitarian",
+      "sector_full": "Humanitarian Assistance",
+      "agencies": ["USAID"],
+      "date_range": {
+        "start": "2020-01-01",
+        "end": "2024-12-31"
+      },
+      "min_records": 400,
+      "description": "Humanitarian assistance - emergency response baseline",
+      "source": "ForeignAssistance.gov humanitarian data"
+    }
+  },
+  "metadata": {
+    "version": "6.2.0",
+    "last_updated": "2024-12-24",
+    "api_base": "https://api.foreignassistance.gov/v1/",
+    "data_sources": {
+      "primary": "ForeignAssistance.gov API",
+      "cross_reference": {
+        "fec": "https://api.open.fec.gov/v1/",
+        "propublica_990": "https://projects.propublica.org/nonprofits/api/v2/"
+      }
+    },
+    "simulation_disclaimer": "SIMULATION FOR RESEARCH PURPOSES ONLY"
+  }
+}

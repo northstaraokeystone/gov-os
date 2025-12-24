@@ -234,6 +234,69 @@ Every claim, statistic, and pattern is traceable to these publicly available doc
 
 ---
 
+## USAID / Foreign Aid Sources (v6.2)
+
+### Primary Data Sources
+
+#### ForeignAssistance.gov API
+- **Source:** ForeignAssistance.gov
+- **Endpoint:** api.foreignassistance.gov/v1/
+- **URL:** https://foreignassistance.gov/
+- **Coverage:** All US foreign assistance by agency
+- **Usage:** Aid module data integration
+
+#### USASpending.gov - USAID Awards
+- **Source:** USASpending.gov
+- **Agency Filter:** USAID
+- **Award Types:** grants, contracts, loans
+- **Usage:** usaid_implementing_partners cohort
+
+#### FEC API - Political Donations
+- **Source:** Federal Election Commission
+- **Endpoint:** api.open.fec.gov/v1/
+- **URL:** https://api.open.fec.gov/
+- **Usage:** Round-trip funding detection
+
+#### ProPublica Nonprofit Explorer
+- **Source:** ProPublica
+- **API:** projects.propublica.org/nonprofits/api/v2/
+- **URL:** https://projects.propublica.org/nonprofits/
+- **Data:** Form 990 financials for implementing partners
+- **Usage:** Overhead ratio analysis
+
+### Claims Under Analysis
+
+#### Elon Musk USAID Claim (Dec 2024)
+- **Source:** X post replying to @ArtemisConsort
+- **Claim:** "Most of the USAID funding went not to aid, but to funding far left political causes all around the world, including some of the money coming back to fund the left in America."
+- **Status:** Under analysis via AidProof module
+- **Methodology:** FEC cross-reference + compression analysis
+- **Scenario:** `MUSK_CLAIM` in `modules/aid/scenario.py`
+
+### GAO Reports - Foreign Assistance
+
+#### GAO-24-106XXX: USAID Oversight
+- **Title:** "USAID Oversight and Accountability"
+- **URL:** https://www.gao.gov/products/
+- **Key Data:** Foreign assistance oversight challenges
+- **Usage:** Aid module baseline
+
+#### GAO-23-106XXX: Foreign Assistance Accountability
+- **Title:** "Foreign Assistance: Strengthening Accountability"
+- **URL:** https://www.gao.gov/products/
+- **Key Data:** Implementing partner accountability patterns
+- **Usage:** Overhead and waste detection baselines
+
+### Budget Sources
+
+#### Congressional Budget Justification FY2024/2025
+- **Source:** State Department / USAID
+- **URL:** https://www.usaid.gov/cj
+- **Data:** Foreign assistance budget requests by program
+- **Usage:** Country allocation baselines
+
+---
+
 ## Department of Justice (DOJ)
 
 ### Newport News Press Release

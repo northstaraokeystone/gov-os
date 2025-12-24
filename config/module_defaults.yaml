@@ -84,3 +84,17 @@ modules:
     priority: "P2"
     data_sources:
       - "research_repos"
+
+  # v6.2: AidProof module - Foreign aid accountability
+  aid:
+    zk_enabled: false  # Public foreign aid data, no PII
+    priority: "P1"
+    data_sources:
+      - "foreignassistance"
+      - "usaspending"
+      - "fec"
+      - "propublica_990"
+    cross_module_links:
+      - "spend"
+      - "graft"
+      - "origin"
